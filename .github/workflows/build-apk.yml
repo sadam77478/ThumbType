@@ -1,9 +1,7 @@
-name: Build ThumbType Release APK
+name: Validate ThumbType Android Build
 
 on:
   workflow_dispatch:
-  push:
-    branches: [ "main" ]
 
 jobs:
   build:
@@ -17,28 +15,10 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
-      - name: Create dedicated ThumbType release keystore
-        run: |
-          keytool -genkeypair -v \
-            -keystore app/thumbtype-release.jks \
-            -storepass ThumbType2026Secure \
-            -alias thumbtype \
-            -keypass ThumbType2026Secure \
-            -keyalg RSA \
-            -keysize 2048 \
-            -validity 10000 \
-            -dname "CN=ThumbType Release, OU=Mobile, O=ThumbType, L=Loralai, ST=Balochistan, C=PK"
-      - name: Build signed release APK
-        env:
-          THUMBTYPE_KEYSTORE: thumbtype-release.jks
-          THUMBTYPE_STORE_PASSWORD: ThumbType2026Secure
-          THUMBTYPE_KEY_ALIAS: thumbtype
-          THUMBTYPE_KEY_PASSWORD: ThumbType2026Secure
-        run: gradle assembleRelease
-      - name: Rename release APK
-        run: cp app/build/outputs/apk/release/app-release.apk ThumbType-v1.2-release.apk
+      - name: Build debug APK
+        run: gradle assembleDebug
       - uses: actions/upload-artifact@v4
         with:
-          name: ThumbType-v1.2-Release-APK
-          path: ThumbType-v1.2-release.apk
+          name: ThumbType-V3-Debug-APK
+          path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
