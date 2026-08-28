@@ -14,11 +14,20 @@ android {
         versionName "1.2"
     }
 
+    signingConfigs {
+        release {
+            storeFile file(System.getenv('THUMBTYPE_KEYSTORE') ?: 'thumbtype-release.jks')
+            storePassword System.getenv('THUMBTYPE_STORE_PASSWORD') ?: 'ThumbType2026Secure'
+            keyAlias System.getenv('THUMBTYPE_KEY_ALIAS') ?: 'thumbtype'
+            keyPassword System.getenv('THUMBTYPE_KEY_PASSWORD') ?: 'ThumbType2026Secure'
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled false
             shrinkResources false
-            signingConfig signingConfigs.debug
+            signingConfig signingConfigs.release
         }
     }
 }
