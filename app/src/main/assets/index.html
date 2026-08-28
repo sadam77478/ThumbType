@@ -1,1 +1,82 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"><title>ThumbType</title><link rel="stylesheet" href="styles.css"></head><body><main><h1>ThumbType</h1><p class="sub">Mobile typing trainer — practice with your phone keyboard.</p><section class="stats"><div><b id="wpm">0</b><span>WPM</span></div><div><b id="acc">100%</b><span>Accuracy</span></div><div><b id="best">0</b><span>Best WPM</span></div></section><section class="card"><div class="row"><strong id="lessonTitle">Lesson 1 · Everyday words</strong><button id="next">Next</button></div><p id="target"></p><textarea id="input" rows="7" placeholder="Tap here and start typing…" spellcheck="false"></textarea><div class="row"><button id="restart">Restart</button><span id="result"></span></div></section><section class="card"><h2>Practice modes</h2><div class="modes"><button data-mode="speed">⚡ Speed</button><button data-mode="accuracy">🎯 Accuracy</button><button data-mode="numbers">🔢 Numbers</button><button data-mode="punctuation">✍ Punctuation</button></div></section></main><script src="app.js"></script></body></html>
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <title>ThumbType</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<main>
+  <header>
+    <h1>ThumbType</h1>
+    <p class="sub">Two-thumb mobile typing trainer</p>
+  </header>
+
+  <section class="stats">
+    <div><b id="wpm">0</b><span>WPM</span></div>
+    <div><b id="acc">100%</b><span>Accuracy</span></div>
+    <div><b id="best">0</b><span>Best WPM</span></div>
+  </section>
+
+  <section class="card lesson-card">
+    <div class="row lesson-head">
+      <div>
+        <small>STRUCTURED COURSE</small>
+        <strong id="lessonTitle">Lesson 1 · Everyday words</strong>
+      </div>
+      <button id="next">Next</button>
+    </div>
+
+    <div class="guide-status">
+      <div class="thumb-pill left" id="leftPill"><span class="thumb-icon">L</span><span>LEFT THUMB</span></div>
+      <div class="next-key"><span>NEXT</span><b id="nextKey">H</b></div>
+      <div class="thumb-pill right" id="rightPill"><span class="thumb-icon">R</span><span>RIGHT THUMB</span></div>
+    </div>
+
+    <section class="keyboard-guide" aria-label="Two thumb reach zone guide">
+      <div class="keyboard-row" id="row1"></div>
+      <div class="keyboard-row row-offset" id="row2"></div>
+      <div class="keyboard-row row-offset2" id="row3"></div>
+      <div class="space-row"><div class="key space-key" data-key=" ">SPACE</div></div>
+      <div class="hands">
+        <div class="hand left-hand" id="leftHand"><div class="thumb-shape"></div><span>Left</span></div>
+        <div class="zone-note"><b id="zoneText">Left reach zone</b><small id="zoneHint">Use the highlighted thumb for the next key</small></div>
+        <div class="hand right-hand" id="rightHand"><div class="thumb-shape"></div><span>Right</span></div>
+      </div>
+      <div class="zone-legend"><span class="left-dot"></span>Left zone <span class="flex-dot"></span>Flexible center <span class="right-dot"></span>Right zone</div>
+    </section>
+
+    <div id="target" class="target" aria-live="polite"></div>
+    <label for="input">Type with both thumbs</label>
+    <textarea id="input" rows="6" placeholder="Tap here and start typing…" spellcheck="false" autocomplete="off" autocapitalize="off"></textarea>
+
+    <div class="row">
+      <button id="restart" class="secondary">Restart</button>
+      <span id="result"></span>
+    </div>
+  </section>
+
+  <section class="card rule-card">
+    <h2>Two-thumb reach-zone rule</h2>
+    <p><b>Left:</b> Q W E R · A S D F · Z X C V</p>
+    <p><b>Right:</b> U I O P · J K L · M</p>
+    <p><b>Flexible center:</b> T Y · G H · B N · Space</p>
+    <p class="tip">Keep both thumbs near their natural resting positions. Center keys may be taken by the nearest thumb to reduce travel and keep rhythm.</p>
+  </section>
+
+  <section class="card">
+    <h2>Practice modes</h2>
+    <div class="modes">
+      <button data-mode="zones">👍 Reach zones</button>
+      <button data-mode="alternation">↔ Alternation</button>
+      <button data-mode="speed">⚡ Speed</button>
+      <button data-mode="accuracy">🎯 Accuracy</button>
+      <button data-mode="numbers">🔢 Numbers</button>
+      <button data-mode="punctuation">✍ Punctuation</button>
+    </div>
+  </section>
+</main>
+<script src="app.js"></script>
+</body>
+</html>
