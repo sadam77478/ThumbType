@@ -17,12 +17,28 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
+      - name: Create dedicated ThumbType release keystore
+        run: |
+          keytool -genkeypair -v \
+            -keystore app/thumbtype-release.jks \
+            -storepass ThumbType2026Secure \
+            -alias thumbtype \
+            -keypass ThumbType2026Secure \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=ThumbType Release, OU=Mobile, O=ThumbType, L=Loralai, ST=Balochistan, C=PK"
       - name: Build signed release APK
+        env:
+          THUMBTYPE_KEYSTORE: thumbtype-release.jks
+          THUMBTYPE_STORE_PASSWORD: ThumbType2026Secure
+          THUMBTYPE_KEY_ALIAS: thumbtype
+          THUMBTYPE_KEY_PASSWORD: ThumbType2026Secure
         run: gradle assembleRelease
       - name: Rename release APK
-        run: cp app/build/outputs/apk/release/app-release.apk ThumbType-v1.1-release.apk
+        run: cp app/build/outputs/apk/release/app-release.apk ThumbType-v1.2-release.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: ThumbType-Release-APK
-          path: ThumbType-v1.1-release.apk
+          name: ThumbType-v1.2-Release-APK
+          path: ThumbType-v1.2-release.apk
           if-no-files-found: error
