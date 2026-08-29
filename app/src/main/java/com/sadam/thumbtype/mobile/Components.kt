@@ -28,7 +28,7 @@ import androidx.compose.ui.unit.sp
 fun AppPageHeader(
     title: String,
     subtitle: String? = null,
-    trailing: (@Composable () -> Unit)? = null
+    trailing: @Composable () -> Unit = {}
 ) {
     Row(
         Modifier.fillMaxWidth(),
@@ -42,10 +42,8 @@ fun AppPageHeader(
                 Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
-        if (trailing != null) {
-            Spacer(Modifier.width(12.dp))
-            trailing()
-        }
+        Spacer(Modifier.width(12.dp))
+        trailing()
     }
 }
 
