@@ -1,0 +1,48 @@
+# Gradle
+.gradle/
+build/
+**/build/
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Local Android SDK configuration
+local.properties
+
+# Signing credentials — NEVER commit
+*.jks
+*.keystore
+*.p12
+*.pfx
+keystore.properties
+signing.properties
+
+# Secrets / environment
+.env
+.env.*
+*.env
+secrets.properties
+credentials.json
+service-account*.json
+google-services-private.json
+
+# Generated packages / artifacts
+*.apk
+*.aab
+*.apks
+*.zip
+mapping.txt
+output-metadata.json
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Logs
+*.log
