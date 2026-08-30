@@ -8,6 +8,7 @@ import com.sadam.thumbtype.mobile.SessionResult
 import com.sadam.thumbtype.mobile.UserProfile
 
 data class ThumbTypeUiState(
+    val isLoading: Boolean = true,
     val settings: AppSettings = AppSettings(),
     val profile: UserProfile = UserProfile(),
     val screen: AppScreen = AppScreen.Home,
