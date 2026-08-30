@@ -1,5 +1,6 @@
 package com.sadam.thumbtype.mobile.app
 
+import androidx.compose.runtime.Immutable
 import com.sadam.thumbtype.mobile.AppScreen
 import com.sadam.thumbtype.mobile.AppSettings
 import com.sadam.thumbtype.mobile.Lesson
@@ -7,6 +8,7 @@ import com.sadam.thumbtype.mobile.LessonRepository
 import com.sadam.thumbtype.mobile.SessionResult
 import com.sadam.thumbtype.mobile.UserProfile
 
+@Immutable
 data class ThumbTypeUiState(
     val isLoading: Boolean = true,
     val settings: AppSettings = AppSettings(),
