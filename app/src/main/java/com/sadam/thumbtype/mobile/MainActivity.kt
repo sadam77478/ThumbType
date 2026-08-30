@@ -104,7 +104,7 @@ fun ThumbTypeRoot() {
             } else {
                 Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))) {
                     when (state.screen) {
-                        AppScreen.Onboarding -> OnboardingScreen(
+                        AppScreen.Onboarding -> PremiumOnboardingScreen(
                             initialProfile = state.profile,
                             onSaveProfile = viewModel::saveProfile,
                             onBaseline = viewModel::startBaseline,
@@ -112,7 +112,7 @@ fun ThumbTypeRoot() {
                         )
 
                         AppScreen.Trainer -> key(state.sessionNonce) {
-                            TrainerScreen(
+                            PremiumTrainerScreen(
                                 lesson = state.selectedLesson,
                                 settings = state.settings,
                                 profile = state.profile,
@@ -126,7 +126,7 @@ fun ThumbTypeRoot() {
                             if (result == null) {
                                 LaunchedEffect(Unit) { viewModel.goHome() }
                             } else {
-                                ResultsScreen(
+                                PremiumResultsScreen(
                                     result = result,
                                     profile = state.profile,
                                     personalBest = state.readModels.home.bestWpm,
@@ -137,7 +137,7 @@ fun ThumbTypeRoot() {
                             }
                         }
 
-                        AppScreen.Privacy -> PrivacyScreen(
+                        AppScreen.Privacy -> PremiumPrivacyScreen(
                             onBack = { viewModel.navigate(AppScreen.Profile) },
                             onExport = {
                                 viewModel.exportBackup { exportResult ->
@@ -201,19 +201,19 @@ fun ThumbTypeRoot() {
                                         onNavigate = viewModel::navigate
                                     )
 
-                                    AppScreen.Learn -> LearnScreen(
+                                    AppScreen.Learn -> PremiumLearnScreen(
                                         data = state.readModels.learn,
                                         onStart = viewModel::startLesson
                                     )
 
-                                    AppScreen.Practice -> PracticeScreen(
+                                    AppScreen.Practice -> PremiumPracticeScreen(
                                         data = state.readModels.practice,
                                         onStart = viewModel::startLesson
                                     )
 
-                                    AppScreen.Progress -> ProgressScreen(state.readModels.progress)
+                                    AppScreen.Progress -> PremiumProgressScreen(state.readModels.progress)
 
-                                    AppScreen.Profile -> ProfileScreen(
+                                    AppScreen.Profile -> PremiumProfileScreen(
                                         data = state.readModels.profile,
                                         settings = state.settings,
                                         profile = state.profile,
