@@ -1,6 +1,5 @@
 package com.sadam.thumbtype.mobile
 
-import androidx.compose.ui.test.assertExists
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
@@ -21,23 +20,18 @@ class OnboardingJourneyTest {
         composeRule.onNodeWithText("Build my training plan").assertIsDisplayed().performClick()
 
         waitForText("Set your target")
-        composeRule.onNodeWithText("Set your target").assertExists()
         composeRule.onNodeWithText("Continue").performClick()
 
         waitForText("Choose your focus")
-        composeRule.onNodeWithText("Choose your focus").assertExists()
         composeRule.onNodeWithText("Continue").performClick()
 
         waitForText("Build a daily routine")
-        composeRule.onNodeWithText("Build a daily routine").assertExists()
         composeRule.onNodeWithText("Continue").performClick()
 
         waitForText("Plan ready")
-        composeRule.onNodeWithText("Plan ready").assertExists()
         composeRule.onNodeWithText("Skip test for now").assertIsDisplayed().performClick()
 
         waitForText("Build your baseline")
-        composeRule.onNodeWithText("Build your baseline").assertExists()
     }
 
     private fun waitForText(text: String) {
