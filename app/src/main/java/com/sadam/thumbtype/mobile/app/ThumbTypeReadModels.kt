@@ -3,7 +3,8 @@ package com.sadam.thumbtype.mobile.app
 import com.sadam.thumbtype.mobile.DailyWorkoutItem
 import com.sadam.thumbtype.mobile.HistoryEntry
 import com.sadam.thumbtype.mobile.KeyAggregate
-import com.sadam.thumbtype.mobile.TrainingEngine
+import com.sadam.thumbtype.mobile.TrainingIntelligenceEngine
+import com.sadam.thumbtype.mobile.TrainingIntelligenceProfile
 import com.sadam.thumbtype.mobile.TransitionAggregate
 import com.sadam.thumbtype.mobile.UserProfile
 import com.sadam.thumbtype.mobile.data.repository.ThumbTypeRepository
@@ -12,6 +13,7 @@ data class HomeUiData(
     val profile: UserProfile = UserProfile(),
     val completedLessonIds: Set<Int> = emptySet(),
     val workout: List<DailyWorkoutItem> = emptyList(),
+    val intelligence: TrainingIntelligenceProfile = TrainingIntelligenceProfile(),
     val todaySeconds: Long = 0L,
     val thumbScore: Int = 0,
     val streak: Int = 0,
@@ -27,13 +29,15 @@ data class LearnUiData(
 )
 
 data class PracticeUiData(
-    val weakDrill: String = ""
+    val weakDrill: String = "",
+    val intelligence: TrainingIntelligenceProfile = TrainingIntelligenceProfile()
 )
 
 data class ProgressUiData(
     val history: List<HistoryEntry> = emptyList(),
     val keyStats: Map<Char, KeyAggregate> = emptyMap(),
     val weakTransitions: List<Pair<String, TransitionAggregate>> = emptyList(),
+    val intelligence: TrainingIntelligenceProfile = TrainingIntelligenceProfile(),
     val profile: UserProfile = UserProfile(),
     val lastWpm: Int = 0,
     val bestWpm: Int = 0,
@@ -62,12 +66,20 @@ suspend fun ThumbTypeRepository.readModels(): ThumbTypeReadModels {
     val history = history()
     val bestWpm = bestWpm()
     val xp = xp()
+    val intelligence = TrainingIntelligenceEngine.analyze(
+        profile = profile,
+        history = history,
+        keyStats = keys,
+        transitionStats = transitions
+    )
+    val adaptiveWorkout = TrainingIntelligenceEngine.buildAdaptiveWorkout(profile, intelligence)
 
     return ThumbTypeReadModels(
         home = HomeUiData(
             profile = profile,
             completedLessonIds = completed,
-            workout = dailyWorkout(),
+            workout = adaptiveWorkout,
+            intelligence = intelligence,
             todaySeconds = todaySeconds(),
             thumbScore = history.lastOrNull()?.thumbScore ?: 0,
             streak = streak(),
@@ -79,12 +91,14 @@ suspend fun ThumbTypeRepository.readModels(): ThumbTypeReadModels {
         ),
         learn = LearnUiData(completedLessonIds = completed),
         practice = PracticeUiData(
-            weakDrill = TrainingEngine.generateWeakDrill(keys, transitions)
+            weakDrill = intelligence.targetedDrill,
+            intelligence = intelligence
         ),
         progress = ProgressUiData(
             history = history,
             keyStats = keys,
             weakTransitions = topWeakTransitions(),
+            intelligence = intelligence,
             profile = profile,
             lastWpm = history.lastOrNull()?.wpm ?: profile.baselineWpm,
             bestWpm = bestWpm,
