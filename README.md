@@ -4,7 +4,7 @@ ThumbType is a mobile-first Android typing trainer focused on two-thumb phone ty
 
 ## Current baseline
 
-- Product line: **ThumbType V4.2 Premium Experience**
+- Product line: **ThumbType V4.3 Accessibility & Adaptive Layout**
 - Application ID: `com.sadam.thumbtype.mobile`
 - Debug application ID: `com.sadam.thumbtype.mobile.debug`
 - Android: minSdk 23, targetSdk 35, compileSdk 35
@@ -13,6 +13,7 @@ ThumbType is a mobile-first Android typing trainer focused on two-thumb phone ty
 - Persistence: Room + Preferences DataStore
 - Training intelligence: deterministic mastery, trend, plateau and adaptive-workout engine
 - UI system: centralized spacing/motion/sizing tokens, premium Material 3 theme and full premium screen routing
+- Adaptive UI: compact/medium/expanded width classes with bounded content and navigation rail on expanded layouts
 - Gradle: 8.9
 
 ### Stable checkpoints
@@ -23,6 +24,8 @@ ThumbType is a mobile-first Android typing trainer focused on two-thumb phone ty
 - Persistence: `checkpoint/v3.6-persistence`
 - Training intelligence: `checkpoint/v4.0-training-intelligence`
 - UI foundation: `checkpoint/v4.1-ui-foundation`
+- Premium experience: `checkpoint/v4.2-premium-experience`
+- Accessibility/adaptive layout: `checkpoint/v4.3-accessibility-adaptive`
 
 ## Build locally
 
@@ -41,7 +44,7 @@ app\build\outputs\apk\debug\app-debug.apk
 
 ## CI verification
 
-GitHub Actions runs the deterministic unit-test suite before compiling the debug application. The test gate includes training/analytics tests, adaptive-training intelligence tests and a Robolectric persistence migration/backup round-trip test. A build is only considered verified when the test gate and `assembleDebug` both succeed, after which the APK and Android Studio project are packaged as artifacts.
+GitHub Actions runs the deterministic unit-test suite before compiling the debug application. The test gate includes training/analytics tests, adaptive-training intelligence tests, responsive width-classification tests and a Robolectric persistence migration/backup round-trip test. A build is only considered verified when the test gate and `assembleDebug` both succeed, after which the APK and Android Studio project are packaged as artifacts.
 
 ## Analytics definitions
 
@@ -79,20 +82,31 @@ V4.1 introduced centralized design tokens, a refined light/dark Material 3 theme
 
 V4.2 carries the premium design system through the active application experience rather than limiting it to Home.
 
-The routed application now uses premium versions of:
+The routed application uses premium versions of onboarding, learning path, practice, progress, profile/settings, privacy/data controls, Results, Trainer, live reach coaching and the custom training keyboard.
 
-- Onboarding and baseline-plan setup
-- Learning-path presentation
-- Practice lab and adaptive coach summary
-- Progress dashboard, trend controls, heatmap and weak-transition presentation
-- Profile/settings and privacy/data controls
-- Session Results presentation
-- Trainer chrome, live metrics and reach coach
-- Custom training keyboard with 50dp interaction height, stronger visual hierarchy and screen-reader semantics on training keys
+The trainer preserves the established analytics model and still records the side of the **screen** tapped. It does not claim biological-thumb detection. Wrong attempts still do not advance the target position; the displayed backspace currently clears the immediate error state rather than acting as a full editable-text history. Full active-session persistence and a richer correction model remain separate future engineering work.
 
-The new trainer preserves the established analytics model and still records the side of the **screen** tapped. It does not claim biological-thumb detection. Wrong attempts still do not advance the target position; the displayed backspace currently clears the immediate error state rather than acting as a full editable-text history. Full active-session persistence and a richer correction model remain separate future engineering work.
+The older screen implementations remain in the source tree temporarily as a low-risk fallback while the premium path is validated. `MainActivity` routes real users through the premium screens.
 
-The older screen implementations remain in the source tree temporarily as a low-risk fallback while V4.2 is validated. `MainActivity` routes real users through the premium V4.2 screens.
+## V4.3 accessibility and adaptive layout
+
+V4.3 adds the first dedicated accessibility/device-adaptation layer instead of assuming one portrait phone size.
+
+- Widths are classified as **compact**, **medium** or **expanded** using deterministic breakpoints at 600dp and 840dp.
+- Phone/medium screens keep bottom navigation; expanded tablet/foldable layouts use a navigation rail.
+- Main feature content is centered and width-bounded so large displays do not stretch phone-oriented cards across the entire screen.
+- The manifest no longer hard-locks portrait orientation, allowing Android to adapt the activity to wider/rotated displays.
+- Full-screen onboarding/results/privacy/trainer surfaces are also width-bounded.
+- Trainer content above the keyboard is vertically scrollable so short displays and larger typography have a safe overflow path.
+- Live trainer metrics switch from a four-column row to a two-by-two layout for narrow screens or the app's larger-text mode.
+- Custom training keys and special keys keep at least a 48dp interaction target.
+- Pointer-driven training keys expose explicit semantic button actions for TalkBack/accessibility activation.
+- Accessibility-triggered key activation records `ThumbSide.FLEX`, intentionally excluding it from left/right reach scoring rather than inventing a screen-touch side that did not occur.
+- Live WPM/accuracy/rhythm/error metrics are exposed as merged spoken readouts rather than fragmented icon/value/label nodes.
+- The target character and reach-coach state include explicit semantic descriptions.
+- Automated unit tests verify width-class boundaries.
+
+V4.3 improves the architecture for accessibility and large screens, but it does **not** replace real-device validation. TalkBack traversal, switch access, very large Android system font scales, tablets, foldables and unusual aspect ratios still require hands-on device/emulator testing before production accessibility can be declared complete.
 
 ## Security baseline
 
@@ -102,6 +116,6 @@ Never commit signing keys, passwords, API secrets, service-account files, `.env`
 
 ## Architecture direction
 
-The architecture foundation includes lifecycle-aware StateFlow UI state, ViewModel-owned actions, feature read models, repository abstraction, application dependency container, centralized navigation policy, saved-state restoration, asynchronous persistence, Room, DataStore, deterministic adaptive-training intelligence and a centralized UI design system.
+The architecture foundation includes lifecycle-aware StateFlow UI state, ViewModel-owned actions, feature read models, repository abstraction, application dependency container, centralized navigation policy, saved-state restoration, asynchronous persistence, Room, DataStore, deterministic adaptive-training intelligence, a centralized UI design system and an adaptive accessibility layer.
 
-Major phases continue to be implemented and verified one at a time. Upcoming production work includes accessibility/device adaptation, performance benchmarking, broader automated UI/integration testing, CI/CD hardening, account/backend architecture, offline-first cloud sync, security hardening, production signing and Google Play release validation.
+Major phases continue to be implemented and verified one at a time. Upcoming production work includes performance benchmarking, broader automated UI/integration testing, CI/CD hardening, account/backend architecture, offline-first cloud sync, security hardening, production signing and Google Play release validation.
