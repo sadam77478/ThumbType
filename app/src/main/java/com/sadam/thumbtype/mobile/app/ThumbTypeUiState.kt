@@ -13,6 +13,7 @@ data class ThumbTypeUiState(
     val screen: AppScreen = AppScreen.Home,
     val selectedLesson: Lesson = LessonRepository.lessons.first(),
     val lastResult: SessionResult? = null,
+    val readModels: ThumbTypeReadModels = ThumbTypeReadModels(),
     val refreshToken: Int = 0,
     val sessionNonce: Int = 0
 )
