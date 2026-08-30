@@ -4,7 +4,7 @@ ThumbType is a mobile-first Android typing trainer focused on two-thumb phone ty
 
 ## Current baseline
 
-- Product line: ThumbType V4.0 Training Intelligence
+- Product line: ThumbType V4.1 Premium UI Foundation
 - Application ID: `com.sadam.thumbtype.mobile`
 - Debug application ID: `com.sadam.thumbtype.mobile.debug`
 - Android: minSdk 23, targetSdk 35, compileSdk 35
@@ -12,11 +12,13 @@ ThumbType is a mobile-first Android typing trainer focused on two-thumb phone ty
 - UI: Jetpack Compose / Material 3
 - Persistence: Room + Preferences DataStore
 - Training intelligence: deterministic mastery, trend, plateau and adaptive-workout engine
+- UI foundation: centralized spacing/motion/sizing tokens, premium Material 3 theme, refined shared components and adaptive Home dashboard
 - Gradle: 8.9
 - Stable pre-hardening checkpoint: `ab1330ffc5438817751ccaa91d57eeab50898f00`
 - Architecture checkpoint: `checkpoint/v3.4-architecture-part-c`
 - Analytics checkpoint: `checkpoint/v3.5-analytics-correctness`
 - Persistence checkpoint: `checkpoint/v3.6-persistence`
+- Training-intelligence checkpoint: `checkpoint/v4.0-training-intelligence`
 
 ## Build locally
 
@@ -85,7 +87,7 @@ New backups use **ThumbType backup version 5** and include structured sessions p
 
 ## V4.0 adaptive training intelligence
 
-ThumbType now derives a deterministic training profile from actual local performance data instead of serving only fixed daily exercises.
+ThumbType derives a deterministic training profile from actual local performance data instead of serving only fixed daily exercises.
 
 The intelligence layer calculates:
 
@@ -102,7 +104,25 @@ The intelligence layer calculates:
 
 Mastery scores combine accuracy, latency and sample confidence so a tiny sample cannot be mistaken for proven mastery. The engine intentionally describes left/right **screen zones and recommended reach**, not biological-thumb detection; Android touch events do not reliably identify which physical thumb produced a tap.
 
-The current V4 intelligence is deterministic by design. It does not require generative AI, cloud transmission or private typed-text uploads, which keeps recommendations measurable, testable and offline-first.
+The current intelligence is deterministic by design. It does not require generative AI, cloud transmission or private typed-text uploads, which keeps recommendations measurable, testable and offline-first.
+
+## V4.1 premium UI foundation
+
+V4.1 begins the visual-product upgrade without replacing every screen in one risky rewrite.
+
+The global UI foundation now includes:
+
+- Centralized spacing, motion and component-size tokens
+- A refined light/dark Material 3 color system
+- Centralized rounded-shape hierarchy
+- A fuller typography hierarchy that continues to respect the larger-text setting
+- A reduced-motion token exposed through the design system for progressive adoption by animated screens
+- Refined reusable cards, metric tiles, pills, action rows, charts, heatmaps, switches, achievement tiles and score presentation
+- A dedicated adaptive-coach card backed by the real V4 training-intelligence profile
+- A new premium Home dashboard that puts ThumbScore, adaptive coaching, WPM/accuracy, daily progress, curriculum progress and the personalized workout above lower-priority content
+- Refined bottom-navigation styling and loading presentation
+
+This checkpoint is intentionally the **UI foundation plus Home dashboard**, not a claim that every app screen has been fully redesigned. Trainer/keyboard, Results, Onboarding, Learn, Practice, Progress, Profile/Privacy, responsive-device behavior, detailed empty/error states and deeper accessibility/motion polish remain scheduled for the next UI subphase.
 
 ## Security baseline
 
@@ -112,4 +132,4 @@ Never commit signing keys, passwords, API secrets, service-account files, `.env`
 
 ## Architecture direction
 
-The architecture foundation includes lifecycle-aware StateFlow UI state, ViewModel-owned application actions, feature read models, a repository abstraction, an application dependency container, centralized navigation policy, saved-state restoration, asynchronous persistence, Room, DataStore and a deterministic adaptive-training intelligence layer. Future production work will continue with premium UI/UX, accessibility, performance benchmarks, broader testing, account/backend infrastructure, offline-first cloud sync and release hardening. Major phases should continue to be implemented and verified one at a time rather than through large unverified rewrites.
+The architecture foundation includes lifecycle-aware StateFlow UI state, ViewModel-owned application actions, feature read models, a repository abstraction, an application dependency container, centralized navigation policy, saved-state restoration, asynchronous persistence, Room, DataStore, deterministic adaptive-training intelligence and a centralized UI design system. Major phases continue to be implemented and verified one at a time rather than through large unverified rewrites.
