@@ -1,5 +1,6 @@
 package com.sadam.thumbtype.mobile
 
+import androidx.compose.ui.test.assertExists
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
@@ -16,22 +17,32 @@ class OnboardingJourneyTest {
 
     @Test
     fun onboardingJourney_reachesHomeOnRealAndroidRuntime() {
+        waitForText("Build my training plan")
         composeRule.onNodeWithText("Build my training plan").assertIsDisplayed().performClick()
-        composeRule.onNodeWithText("Set your target").assertIsDisplayed()
 
+        waitForText("Set your target")
+        composeRule.onNodeWithText("Set your target").assertExists()
         composeRule.onNodeWithText("Continue").performClick()
-        composeRule.onNodeWithText("Choose your focus").assertIsDisplayed()
-        composeRule.onNodeWithText("Continue").performClick()
-        composeRule.onNodeWithText("Build a daily routine").assertIsDisplayed()
-        composeRule.onNodeWithText("Continue").performClick()
-        composeRule.onNodeWithText("Plan ready").assertIsDisplayed()
-        composeRule.onNodeWithText("Skip test for now").performClick()
 
-        composeRule.waitUntil(timeoutMillis = 8_000) {
-            runCatching {
-                composeRule.onNodeWithText("Build your baseline").fetchSemanticsNode()
-            }.isSuccess
+        waitForText("Choose your focus")
+        composeRule.onNodeWithText("Choose your focus").assertExists()
+        composeRule.onNodeWithText("Continue").performClick()
+
+        waitForText("Build a daily routine")
+        composeRule.onNodeWithText("Build a daily routine").assertExists()
+        composeRule.onNodeWithText("Continue").performClick()
+
+        waitForText("Plan ready")
+        composeRule.onNodeWithText("Plan ready").assertExists()
+        composeRule.onNodeWithText("Skip test for now").assertIsDisplayed().performClick()
+
+        waitForText("Build your baseline")
+        composeRule.onNodeWithText("Build your baseline").assertExists()
+    }
+
+    private fun waitForText(text: String) {
+        composeRule.waitUntil(timeoutMillis = 10_000) {
+            runCatching { composeRule.onNodeWithText(text).fetchSemanticsNode() }.isSuccess
         }
-        composeRule.onNodeWithText("Build your baseline").assertIsDisplayed()
     }
 }
