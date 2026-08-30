@@ -15,15 +15,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.sadam.thumbtype.mobile.app.HomeUiData
 import com.sadam.thumbtype.mobile.app.LearnUiData
 import com.sadam.thumbtype.mobile.app.PracticeUiData
 import com.sadam.thumbtype.mobile.app.ProfileUiData
 import com.sadam.thumbtype.mobile.app.ProgressUiData
 
 private enum class PremiumChartMetric { WPM, ACCURACY, SCORE }
+private data class PremiumPracticeItem(val title: String, val subtitle: String, val icon: ImageVector, val lesson: Lesson)
 
 @Composable
 fun PremiumOnboardingScreen(
@@ -33,30 +32,27 @@ fun PremiumOnboardingScreen(
     onSkip: () -> Unit
 ) {
     var step by remember { mutableIntStateOf(0) }
-    var targetWpm by remember { mutableIntStateOf(initialProfile.targetWpm) }
-    var targetAccuracy by remember { mutableIntStateOf(initialProfile.targetAccuracy) }
-    var dailyMinutes by remember { mutableIntStateOf(initialProfile.dailyGoalMinutes) }
+    var wpm by remember { mutableIntStateOf(initialProfile.targetWpm) }
+    var accuracy by remember { mutableIntStateOf(initialProfile.targetAccuracy) }
+    var minutes by remember { mutableIntStateOf(initialProfile.dailyGoalMinutes) }
     var focus by remember { mutableStateOf(initialProfile.focus) }
     val spacing = ThumbTypeDesign.spacing
-    val total = 5
 
-    Column(
-        Modifier.fillMaxSize().padding(horizontal = spacing.lg, vertical = spacing.md)
-    ) {
+    Column(Modifier.fillMaxSize().padding(horizontal = spacing.lg, vertical = spacing.md)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primary.copy(.10f)) {
                 Row(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.PhoneAndroid, contentDescription = null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+                    Icon(Icons.Default.PhoneAndroid, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
                     Spacer(Modifier.width(7.dp))
                     Text("ThumbType", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
                 }
             }
             Spacer(Modifier.weight(1f))
-            TinyPill("${step + 1} / $total")
+            TinyPill("${step + 1}/5")
         }
         Spacer(Modifier.height(spacing.md))
         LinearProgressIndicator(
-            progress = { (step + 1) / total.toFloat() },
+            progress = { (step + 1) / 5f },
             modifier = Modifier.fillMaxWidth().height(7.dp),
             trackColor = MaterialTheme.colorScheme.surfaceVariant
         )
@@ -64,42 +60,110 @@ fun PremiumOnboardingScreen(
 
         Box(Modifier.weight(1f)) {
             when (step) {
-                0 -> OnboardingWelcome()
-                1 -> OnboardingGoals(targetWpm, targetAccuracy, { targetWpm = it }, { targetAccuracy = it })
-                2 -> OnboardingFocus(focus) { focus = it }
-                3 -> OnboardingDailyGoal(dailyMinutes) { dailyMinutes = it }
-                else -> OnboardingReady(targetWpm, targetAccuracy, dailyMinutes, focus)
+                0 -> Column {
+                    GradientHero("Mobile-first training", "Build elite two-thumb control", "Train reach, rhythm, precision and real phone typing with a keyboard designed for practice.") {
+                        Icon(Icons.Default.TouchApp, null, Modifier.align(Alignment.CenterEnd).padding(end = 20.dp).size(54.dp), tint = Color.White.copy(.92f))
+                    }
+                    Spacer(Modifier.height(22.dp))
+                    PremiumFeature("Adaptive coaching", "Weak keys and transitions shape your next workout.", Icons.Default.AutoGraph)
+                    PremiumFeature("Adaptive reach", "Center keys can be assigned to the most efficient screen side.", Icons.Default.TouchApp)
+                    PremiumFeature("Privacy-first", "Core training and analytics stay local in this build.", Icons.Default.Security)
+                }
+                1 -> Column {
+                    AppPageHeader("Set your target", "Choose goals that are challenging but realistic.")
+                    Spacer(Modifier.height(20.dp))
+                    PremiumCard {
+                        Text("Target speed", style = MaterialTheme.typography.titleMedium)
+                        PremiumChoiceGrid(listOf(30, 40, 50, 60), wpm, { "$it WPM" }) { wpm = it }
+                        Spacer(Modifier.height(14.dp))
+                        Text("Target accuracy", style = MaterialTheme.typography.titleMedium)
+                        PremiumChoiceGrid(listOf(95, 97, 98, 99), accuracy, { "$it%" }) { accuracy = it }
+                    }
+                }
+                2 -> Column {
+                    AppPageHeader("Choose your focus", "This changes coaching emphasis without restricting practice modes.")
+                    Spacer(Modifier.height(16.dp))
+                    listOf(
+                        Triple(TrainingFocus.BALANCED, "Balanced", "Speed + accuracy + rhythm") to Icons.Default.Tune,
+                        Triple(TrainingFocus.SPEED, "Speed", "Reduce hesitation safely") to Icons.Default.Bolt,
+                        Triple(TrainingFocus.ACCURACY, "Accuracy", "Precision before pace") to Icons.Default.GpsFixed,
+                        Triple(TrainingFocus.RHYTHM, "Rhythm", "Even key-to-key timing") to Icons.Default.GraphicEq
+                    ).forEach { (meta, icon) ->
+                        val selected = focus == meta.first
+                        Surface(
+                            Modifier.fillMaxWidth().padding(vertical = 5.dp).clickable { focus = meta.first },
+                            shape = MaterialTheme.shapes.large,
+                            color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+                            border = BorderStroke(1.dp, if (selected) MaterialTheme.colorScheme.primary.copy(.25f) else MaterialTheme.colorScheme.outlineVariant)
+                        ) {
+                            Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(icon, null, tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                                Spacer(Modifier.width(13.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Text(meta.second, style = MaterialTheme.typography.titleSmall)
+                                    Text(meta.third, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                                if (selected) Icon(Icons.Default.CheckCircle, null, tint = MaterialTheme.colorScheme.primary)
+                            }
+                        }
+                    }
+                }
+                3 -> Column {
+                    AppPageHeader("Build a daily routine", "Short daily practice is easier to sustain and measure.")
+                    Spacer(Modifier.height(16.dp))
+                    listOf(5, 10, 15, 20).forEach { value ->
+                        val selected = minutes == value
+                        Surface(
+                            Modifier.fillMaxWidth().padding(vertical = 6.dp).clickable { minutes = value },
+                            shape = MaterialTheme.shapes.large,
+                            color = if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                        ) {
+                            Row(Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Text("$value", style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.secondary)
+                                Spacer(Modifier.width(8.dp))
+                                Text("minutes / day", style = MaterialTheme.typography.titleSmall)
+                                Spacer(Modifier.weight(1f))
+                                if (selected) Icon(Icons.Default.CheckCircle, null, tint = MaterialTheme.colorScheme.secondary)
+                            }
+                        }
+                    }
+                }
+                else -> Column {
+                    GradientHero("Plan ready", "Start with a clean baseline", "A short test gives ThumbType a useful starting point for personalized coaching.")
+                    Spacer(Modifier.height(18.dp))
+                    PremiumCard {
+                        DetailLine("Speed goal", "$wpm WPM")
+                        DetailLine("Accuracy goal", "$accuracy%")
+                        DetailLine("Daily training", "$minutes min")
+                        DetailLine("Primary focus", focus.name.lowercase().replaceFirstChar { it.uppercase() })
+                    }
+                }
             }
         }
 
         Spacer(Modifier.height(spacing.md))
-        if (step < total - 1) {
-            Button(
-                onClick = { step++ },
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                shape = MaterialTheme.shapes.medium
-            ) {
+        if (step < 4) {
+            Button(onClick = { step++ }, Modifier.fillMaxWidth().height(56.dp), shape = MaterialTheme.shapes.medium) {
                 Text(if (step == 0) "Build my training plan" else "Continue", fontWeight = FontWeight.Bold)
             }
-            if (step > 0) {
-                TextButton(onClick = { step-- }, modifier = Modifier.fillMaxWidth()) { Text("Back") }
-            }
+            if (step > 0) TextButton(onClick = { step-- }, Modifier.fillMaxWidth()) { Text("Back") }
         } else {
             Button(
                 onClick = {
-                    onSaveProfile(UserProfile(targetWpm, targetAccuracy, dailyMinutes, focus))
+                    onSaveProfile(UserProfile(wpm, accuracy, minutes, focus))
                     onBaseline()
                 },
                 modifier = Modifier.fillMaxWidth().height(56.dp),
                 shape = MaterialTheme.shapes.medium
             ) {
-                Icon(Icons.Default.Timer, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
+                Icon(Icons.Default.Timer, null)
+                Spacer(Modifier.width(7.dp))
                 Text("Take baseline test", fontWeight = FontWeight.Bold)
             }
             TextButton(
                 onClick = {
-                    onSaveProfile(UserProfile(targetWpm, targetAccuracy, dailyMinutes, focus))
+                    onSaveProfile(UserProfile(wpm, accuracy, minutes, focus))
                     onSkip()
                 },
                 modifier = Modifier.fillMaxWidth()
@@ -109,135 +173,29 @@ fun PremiumOnboardingScreen(
 }
 
 @Composable
-private fun OnboardingWelcome() {
-    Column {
-        GradientHero(
-            eyebrow = "Mobile-first training",
-            title = "Build elite two-thumb control",
-            subtitle = "Train reach, rhythm, precision and real phone typing with a keyboard designed for practice."
-        ) {
-            Icon(
-                Icons.Default.TouchApp,
-                contentDescription = null,
-                modifier = Modifier.align(Alignment.CenterEnd).padding(end = 22.dp).size(56.dp),
-                tint = Color.White.copy(.92f)
-            )
-        }
-        Spacer(Modifier.height(24.dp))
-        listOf(
-            Triple(Icons.Default.AutoGraph, "Adaptive coaching", "Your weak keys and transitions shape the next workout."),
-            Triple(Icons.Default.TouchApp, "Screen-zone reach", "Center keys stay adaptive instead of forcing one rigid side."),
-            Triple(Icons.Default.Security, "Privacy-first", "Core training and analytics stay local in this build.")
-        ).forEach { (icon, title, subtitle) ->
-            ActionRow(title, subtitle, icon, onClick = {})
-            Spacer(Modifier.height(10.dp))
-        }
-    }
-}
-
-@Composable
-private fun OnboardingGoals(wpm: Int, accuracy: Int, onWpm: (Int) -> Unit, onAccuracy: (Int) -> Unit) {
-    Column {
-        AppPageHeader("Set your target", "ThumbType uses these goals to personalize difficulty and coaching.")
-        Spacer(Modifier.height(24.dp))
-        PremiumCard {
-            Text("Target speed", style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(10.dp))
-            ChoiceChipRows(listOf(30, 40, 50, 60), wpm, { "$it WPM" }, onWpm)
-            Spacer(Modifier.height(22.dp))
-            Text("Target accuracy", style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(10.dp))
-            ChoiceChipRows(listOf(95, 97, 98, 99), accuracy, { "$it%" }, onAccuracy)
-        }
-    }
-}
-
-@Composable
-private fun OnboardingFocus(focus: TrainingFocus, onFocus: (TrainingFocus) -> Unit) {
-    Column {
-        AppPageHeader("Choose your focus", "This changes training emphasis without locking you out of other practice modes.")
-        Spacer(Modifier.height(20.dp))
-        val options = listOf(
-            Triple(TrainingFocus.BALANCED, "Balanced", "Speed + accuracy + rhythm") to Icons.Default.Tune,
-            Triple(TrainingFocus.SPEED, "Speed", "Reduce hesitation safely") to Icons.Default.Bolt,
-            Triple(TrainingFocus.ACCURACY, "Accuracy", "Precision before pace") to Icons.Default.GpsFixed,
-            Triple(TrainingFocus.RHYTHM, "Rhythm", "Even key-to-key timing") to Icons.Default.GraphicEq
-        )
-        options.forEach { (meta, icon) ->
-            val selected = focus == meta.first
-            Surface(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp).clickable { onFocus(meta.first) },
-                shape = MaterialTheme.shapes.large,
-                color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
-                border = BorderStroke(1.dp, if (selected) MaterialTheme.colorScheme.primary.copy(.25f) else MaterialTheme.colorScheme.outlineVariant)
-            ) {
-                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(icon, contentDescription = null, tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
-                    Spacer(Modifier.width(14.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(meta.second, style = MaterialTheme.typography.titleSmall)
-                        Text(meta.third, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    if (selected) Icon(Icons.Default.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                }
+private fun PremiumFeature(title: String, subtitle: String, icon: ImageVector) {
+    Surface(
+        Modifier.fillMaxWidth().padding(vertical = 5.dp),
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    ) {
+        Row(Modifier.padding(15.dp), verticalAlignment = Alignment.CenterVertically) {
+            Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primary.copy(.10f)) {
+                Icon(icon, null, Modifier.padding(9.dp), tint = MaterialTheme.colorScheme.primary)
+            }
+            Spacer(Modifier.width(12.dp))
+            Column {
+                Text(title, style = MaterialTheme.typography.titleSmall)
+                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
 }
 
 @Composable
-private fun OnboardingDailyGoal(minutes: Int, onMinutes: (Int) -> Unit) {
-    Column {
-        AppPageHeader("Set a sustainable routine", "Short daily practice beats occasional marathon sessions.")
-        Spacer(Modifier.height(20.dp))
-        listOf(5, 10, 15, 20).forEach { value ->
-            val selected = minutes == value
-            Surface(
-                Modifier.fillMaxWidth().padding(vertical = 6.dp).clickable { onMinutes(value) },
-                shape = MaterialTheme.shapes.large,
-                color = if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
-                border = BorderStroke(1.dp, if (selected) MaterialTheme.colorScheme.secondary.copy(.25f) else MaterialTheme.colorScheme.outlineVariant)
-            ) {
-                Row(Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(value.toString(), style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.secondary)
-                    Spacer(Modifier.width(8.dp))
-                    Text("minutes / day", style = MaterialTheme.typography.titleSmall)
-                    Spacer(Modifier.weight(1f))
-                    if (selected) Icon(Icons.Default.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.secondary)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun OnboardingReady(wpm: Int, accuracy: Int, minutes: Int, focus: TrainingFocus) {
-    Column {
-        GradientHero(
-            eyebrow = "Plan ready",
-            title = "Start with a clean baseline",
-            subtitle = "One short test gives ThumbType a useful starting point for personalized coaching."
-        )
-        Spacer(Modifier.height(20.dp))
-        PremiumCard {
-            DetailLine("Speed goal", "$wpm WPM")
-            DetailLine("Accuracy goal", "$accuracy%")
-            DetailLine("Daily training", "$minutes min")
-            DetailLine("Primary focus", focus.name.lowercase().replaceFirstChar { it.uppercase() })
-        }
-        Spacer(Modifier.height(14.dp))
-        Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.secondaryContainer) {
-            Row(Modifier.padding(16.dp), verticalAlignment = Alignment.Top) {
-                Icon(Icons.Default.VerifiedUser, contentDescription = null, tint = MaterialTheme.colorScheme.secondary)
-                Spacer(Modifier.width(12.dp))
-                Text("The baseline uses ThumbType's own training keyboard. Your personal messages are not required.", style = MaterialTheme.typography.bodyMedium)
-            }
-        }
-    }
-}
-
-@Composable
-private fun ChoiceChipRows(values: List<Int>, selected: Int, label: (Int) -> String, onSelected: (Int) -> Unit) {
+private fun PremiumChoiceGrid(values: List<Int>, selected: Int, label: (Int) -> String, onSelected: (Int) -> Unit) {
+    Spacer(Modifier.height(8.dp))
     values.chunked(2).forEach { row ->
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             row.forEach { value ->
@@ -245,41 +203,32 @@ private fun ChoiceChipRows(values: List<Int>, selected: Int, label: (Int) -> Str
                     selected = selected == value,
                     onClick = { onSelected(value) },
                     label = { Text(label(value), fontWeight = FontWeight.Bold) },
-                    leadingIcon = if (selected == value) ({ Icon(Icons.Default.Check, contentDescription = null, Modifier.size(16.dp)) }) else null,
                     modifier = Modifier.weight(1f)
                 )
             }
         }
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(5.dp))
     }
 }
 
 @Composable
 fun PremiumLearnScreen(data: LearnUiData, onStart: (Lesson) -> Unit) {
     val completed = data.completedLessonIds
-    val firstUnlocked = LessonRepository.lessons.firstOrNull { it.id !in completed }?.id ?: Int.MAX_VALUE
-    LazyColumn(
-        Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(20.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        item {
-            AppPageHeader("Learning path", "A structured progression from two-thumb foundations to advanced mobile speed.")
-        }
+    val nextId = LessonRepository.lessons.firstOrNull { it.id !in completed }?.id ?: Int.MAX_VALUE
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(11.dp)) {
+        item { AppPageHeader("Learning path", "Move from foundations to advanced mobile control one focused lesson at a time.") }
         item {
             PremiumCard {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primary.copy(.10f)) {
-                        Icon(Icons.Default.School, contentDescription = null, Modifier.padding(12.dp), tint = MaterialTheme.colorScheme.primary)
-                    }
-                    Spacer(Modifier.width(14.dp))
+                    Icon(Icons.Default.School, null, tint = MaterialTheme.colorScheme.primary)
+                    Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
                         Text("Curriculum progress", style = MaterialTheme.typography.titleMedium)
-                        Text("${completed.size} of ${LessonRepository.lessons.size} lessons completed", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("${completed.size} of ${LessonRepository.lessons.size} lessons complete", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    TinyPill("${(completed.size * 100 / LessonRepository.lessons.size.coerceAtLeast(1))}%")
+                    TinyPill("${completed.size * 100 / LessonRepository.lessons.size.coerceAtLeast(1)}%")
                 }
-                Spacer(Modifier.height(14.dp))
+                Spacer(Modifier.height(12.dp))
                 LinearProgressIndicator(
                     progress = { completed.size.toFloat() / LessonRepository.lessons.size.coerceAtLeast(1) },
                     modifier = Modifier.fillMaxWidth().height(8.dp),
@@ -289,10 +238,9 @@ fun PremiumLearnScreen(data: LearnUiData, onStart: (Lesson) -> Unit) {
         }
         LessonRepository.lessons.groupBy { it.stage }.forEach { (stage, lessons) ->
             item {
-                Spacer(Modifier.height(4.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Column {
-                        Text("Stage $stage", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                        Text("STAGE $stage", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                         Text(LessonRepository.stageNames[stage] ?: "Training", style = MaterialTheme.typography.titleLarge)
                     }
                     TinyPill("${lessons.count { it.id in completed }}/${lessons.size}")
@@ -300,51 +248,30 @@ fun PremiumLearnScreen(data: LearnUiData, onStart: (Lesson) -> Unit) {
             }
             items(lessons) { lesson ->
                 val done = lesson.id in completed
-                val unlocked = lesson.id <= firstUnlocked
+                val unlocked = lesson.id <= nextId
                 Surface(
                     Modifier.fillMaxWidth().clickable(enabled = unlocked) { onStart(lesson) },
                     shape = MaterialTheme.shapes.large,
-                    color = when {
-                        done -> MaterialTheme.colorScheme.secondary.copy(.055f)
-                        unlocked -> MaterialTheme.colorScheme.surface
-                        else -> MaterialTheme.colorScheme.surfaceVariant.copy(.55f)
-                    },
+                    color = if (done) MaterialTheme.colorScheme.secondary.copy(.055f) else MaterialTheme.colorScheme.surface,
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
                 ) {
-                    Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Surface(
-                            shape = CircleShape,
-                            color = when {
-                                done -> MaterialTheme.colorScheme.secondary.copy(.14f)
-                                unlocked -> MaterialTheme.colorScheme.primary.copy(.10f)
-                                else -> MaterialTheme.colorScheme.outline.copy(.10f)
-                            }
-                        ) {
+                    Row(Modifier.padding(15.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primary.copy(.09f)) {
                             Icon(
-                                when {
-                                    done -> Icons.Default.Check
-                                    unlocked -> Icons.Default.PlayArrow
-                                    else -> Icons.Default.Lock
-                                },
-                                contentDescription = null,
-                                modifier = Modifier.padding(11.dp),
-                                tint = when {
-                                    done -> MaterialTheme.colorScheme.secondary
-                                    unlocked -> MaterialTheme.colorScheme.primary
-                                    else -> MaterialTheme.colorScheme.onSurfaceVariant
-                                }
+                                when { done -> Icons.Default.Check; unlocked -> Icons.Default.PlayArrow; else -> Icons.Default.Lock },
+                                null,
+                                Modifier.padding(10.dp),
+                                tint = when { done -> MaterialTheme.colorScheme.secondary; unlocked -> MaterialTheme.colorScheme.primary; else -> MaterialTheme.colorScheme.onSurfaceVariant }
                             )
                         }
-                        Spacer(Modifier.width(13.dp))
+                        Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
                             Text("${lesson.id}. ${lesson.title}", style = MaterialTheme.typography.titleSmall)
                             Text(lesson.subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Spacer(Modifier.height(5.dp))
-                            TinyPill(lesson.skill)
                         }
                         Column(horizontalAlignment = Alignment.End) {
                             Text("+${lesson.xp}", fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.primary)
-                            Text("XP", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("XP", style = MaterialTheme.typography.labelSmall)
                         }
                     }
                 }
@@ -357,29 +284,21 @@ fun PremiumLearnScreen(data: LearnUiData, onStart: (Lesson) -> Unit) {
 @Composable
 fun PremiumPracticeScreen(data: PracticeUiData, onStart: (Lesson) -> Unit) {
     var custom by remember { mutableStateOf("") }
-    val intelligence = data.intelligence
     val modes = remember {
         listOf(
-            PracticeMode("15s Sprint", "Short speed burst", Icons.Default.Bolt, Lesson(-101, 0, "15s Sprint", "Short speed burst", "quick mobile typing needs clean rhythm and confident reach", "Speed", 20, 15, true)),
-            PracticeMode("Accuracy", "Slow down and remove mistakes", Icons.Default.GpsFixed, Lesson(-102, 0, "Accuracy Lab", "Precision first", "accuracy creates reliable speed when every character is deliberate", "Accuracy", 25, isPractice = true)),
-            PracticeMode("Rhythm", "Build even key timing", Icons.Default.GraphicEq, Lesson(-103, 0, "Rhythm Lab", "Even transitions", "read your great new idea then bring the bright thing home", "Rhythm", 25, isPractice = true)),
-            PracticeMode("Chat", "Real mobile conversation style", Icons.Default.Chat, Lesson(-104, 0, "Chat Practice", "Natural phone writing", "hey are you free later i will send the details when i get home", "Real-world", 25, isPractice = true)),
-            PracticeMode("Work", "Professional mobile messages", Icons.Default.Work, Lesson(-105, 0, "Work Practice", "Professional mobile typing", "thanks for the update i will review the details and send my feedback today", "Real-world", 25, isPractice = true)),
-            PracticeMode("Numbers", "Dates, totals and numeric reach", Icons.Default.Numbers, Lesson(-106, 0, "Numbers", "Numeric control", "123 456 789 2026 50 97 15 30 60 100", "Numbers", 25, isPractice = true))
+            PremiumPracticeItem("15s Sprint", "Short reaction-speed burst", Icons.Default.Bolt, Lesson(-101, 0, "15s Sprint", "Short speed burst", "quick mobile typing needs clean rhythm and confident reach", "Speed", 20, 15, true)),
+            PremiumPracticeItem("Accuracy", "Slow down and remove mistakes", Icons.Default.GpsFixed, Lesson(-102, 0, "Accuracy Lab", "Precision first", "accuracy creates reliable speed when every character is deliberate", "Accuracy", 25, isPractice = true)),
+            PremiumPracticeItem("Rhythm", "Build even key timing", Icons.Default.GraphicEq, Lesson(-103, 0, "Rhythm Lab", "Even transitions", "read your great new idea then bring the bright thing home", "Rhythm", 25, isPractice = true)),
+            PremiumPracticeItem("Chat", "Natural conversation-style typing", Icons.Default.Chat, Lesson(-104, 0, "Chat Practice", "Real phone writing", "hey are you free later i will send the details when i get home", "Chat", 25, isPractice = true)),
+            PremiumPracticeItem("Work", "Professional mobile writing", Icons.Default.Work, Lesson(-105, 0, "Work Practice", "Professional phone typing", "thanks for the update i will review the details and send my feedback today", "Work", 25, isPractice = true)),
+            PremiumPracticeItem("Numbers", "Dates, totals and numeric reach", Icons.Default.Numbers, Lesson(-106, 0, "Numbers", "Numeric control", "123 456 789 2026 50 97 15 30 60 100", "Numbers", 25, isPractice = true))
         )
     }
-
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        item { AppPageHeader("Practice lab", "Focused sessions for speed, accuracy, rhythm and real-world phone typing.") }
-        item { CoachSummaryCard(intelligence) }
+        item { AppPageHeader("Practice lab", "Choose a focused mode or let ThumbType target your measured weaknesses.") }
+        item { PremiumCoachCard(data.intelligence) }
         item {
-            ActionRow(
-                title = "Targeted weakness trainer",
-                subtitle = "Generated from your measured weak keys and transitions",
-                icon = Icons.Default.AutoFixHigh,
-                accent = MaterialTheme.colorScheme.error,
-                badge = "Adaptive"
-            ) {
+            ActionRow("Targeted weakness trainer", "Generated from weak keys and transitions", Icons.Default.AutoFixHigh, MaterialTheme.colorScheme.error, "Adaptive") {
                 onStart(Lesson(-107, 0, "Weakness Trainer", "Generated from your local performance", data.weakDrill, "Weakness", 35, isPractice = true))
             }
         }
@@ -395,13 +314,13 @@ fun PremiumPracticeScreen(data: PracticeUiData, onStart: (Lesson) -> Unit) {
                     minLines = 3,
                     maxLines = 6,
                     label = { Text("Paste or write practice text") },
-                    supportingText = { Text("${custom.length}/600 • stays local") }
+                    supportingText = { Text("${custom.length}/600 • local only") }
                 )
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(10.dp))
                 Button(
                     onClick = {
                         val text = custom.trim()
-                        if (text.isNotBlank()) onStart(Lesson(-108, 0, "Custom Practice", "Your temporary text", text, "Custom", 0, isPractice = true))
+                        if (text.isNotEmpty()) onStart(Lesson(-108, 0, "Custom Practice", "Temporary local text", text, "Custom", 0, isPractice = true))
                     },
                     enabled = custom.isNotBlank(),
                     modifier = Modifier.fillMaxWidth().height(52.dp)
@@ -412,122 +331,95 @@ fun PremiumPracticeScreen(data: PracticeUiData, onStart: (Lesson) -> Unit) {
     }
 }
 
-private data class PracticeMode(val title: String, val subtitle: String, val icon: ImageVector, val lesson: Lesson)
-
 @Composable
-private fun CoachSummaryCard(intelligence: TrainingIntelligenceProfile) {
+private fun PremiumCoachCard(intelligence: TrainingIntelligenceProfile) {
     PremiumCard {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primary.copy(.10f)) {
-                Icon(Icons.Default.Psychology, contentDescription = null, Modifier.padding(12.dp), tint = MaterialTheme.colorScheme.primary)
+                Icon(Icons.Default.Psychology, null, Modifier.padding(11.dp), tint = MaterialTheme.colorScheme.primary)
             }
-            Spacer(Modifier.width(13.dp))
+            Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text("Adaptive coach", style = MaterialTheme.typography.titleMedium)
-                Text(intelligence.headline, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(intelligence.headline, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            TinyPill("Level ${intelligence.difficultyLevel}/10")
+            TinyPill("L${intelligence.difficultyLevel}")
         }
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(10.dp))
         Text(intelligence.explanation, style = MaterialTheme.typography.bodyMedium)
-        Spacer(Modifier.height(12.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Spacer(Modifier.height(10.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
             TinyPill(intelligence.priority.name.lowercase().replace('_', ' ').replaceFirstChar { it.uppercase() }, Icons.Default.GpsFixed)
-            if (intelligence.trend.plateauDetected) TinyPill("Plateau detected", Icons.Default.Timeline, ThumbAmber)
+            if (intelligence.trend.plateauDetected) TinyPill("Plateau", Icons.Default.Timeline, ThumbAmber)
         }
     }
 }
 
 @Composable
 fun PremiumProgressScreen(data: ProgressUiData) {
-    val history = data.history
-    val stats = data.keyStats
-    val transitions = data.weakTransitions
-    val profile = data.profile
     var metric by remember { mutableStateOf(PremiumChartMetric.WPM) }
     var selectedKey by remember { mutableStateOf<Char?>(null) }
     val values = when (metric) {
-        PremiumChartMetric.WPM -> history.map { it.wpm }
-        PremiumChartMetric.ACCURACY -> history.map { it.accuracy }
-        PremiumChartMetric.SCORE -> history.map { it.thumbScore }
+        PremiumChartMetric.WPM -> data.history.map { it.wpm }
+        PremiumChartMetric.ACCURACY -> data.history.map { it.accuracy }
+        PremiumChartMetric.SCORE -> data.history.map { it.thumbScore }
     }
-    val delta = if (history.size >= 2) history.last().wpm - history.first().wpm else 0
-
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        item { AppPageHeader("Progress", "See your performance trend, skill weaknesses and mastery signals.") }
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(13.dp)) {
+        item { AppPageHeader("Progress", "See your trend, mastery signals and the areas that deserve the next practice block.") }
         item {
-            Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                MetricCard("${data.lastWpm}", "Current WPM", Icons.Default.Speed, Modifier.weight(1f))
-                MetricCard("${data.bestWpm}", "Best WPM", Icons.Default.EmojiEvents, Modifier.weight(1f), ThumbAmber)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                MetricCard("${data.lastWpm}", "Current", Icons.Default.Speed, Modifier.weight(1f))
+                MetricCard("${data.bestWpm}", "Best", Icons.Default.EmojiEvents, Modifier.weight(1f), ThumbAmber)
                 MetricCard("${data.thumbScore}", "ThumbScore", Icons.Default.AutoGraph, Modifier.weight(1f), MaterialTheme.colorScheme.secondary)
             }
         }
-        item { CoachSummaryCard(data.intelligence) }
+        item { PremiumCoachCard(data.intelligence) }
         item {
             PremiumCard {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
-                    Column {
-                        Text("Performance trend", style = MaterialTheme.typography.titleLarge)
-                        Text("${history.size} recorded sessions", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    if (history.size >= 2 && metric == PremiumChartMetric.WPM) {
-                        TinyPill("${if (delta >= 0) "+" else ""}$delta WPM", Icons.Default.TrendingUp, if (delta >= 0) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.error)
-                    }
-                }
-                Spacer(Modifier.height(14.dp))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                    PremiumChartMetric.entries.forEach { item ->
+                Text("Performance trend", style = MaterialTheme.typography.titleLarge)
+                Text("${data.history.size} recorded sessions", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.height(10.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    PremiumChartMetric.entries.forEach { value ->
                         FilterChip(
-                            selected = metric == item,
-                            onClick = { metric = item },
-                            label = { Text(when (item) { PremiumChartMetric.WPM -> "WPM"; PremiumChartMetric.ACCURACY -> "Accuracy"; PremiumChartMetric.SCORE -> "Score" }) },
+                            selected = metric == value,
+                            onClick = { metric = value },
+                            label = { Text(value.name.lowercase().replaceFirstChar { it.uppercase() }) },
                             modifier = Modifier.weight(1f)
                         )
                     }
                 }
-                Spacer(Modifier.height(12.dp))
-                if (history.isEmpty()) {
-                    EmptyInsight("No trend yet", "Complete a few sessions and your performance graph will appear here.", Icons.Default.AutoGraph)
-                } else {
-                    ProgressChart(values)
-                }
-            }
-        }
-        item {
-            PremiumCard {
-                Text("Baseline & target", style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(10.dp))
-                DetailLine("Starting speed", if (profile.baselineWpm > 0) "${profile.baselineWpm} WPM" else "Not measured")
-                DetailLine("Current speed", "${data.lastWpm} WPM")
-                DetailLine("Target", "${profile.targetWpm} WPM @ ${profile.targetAccuracy}%")
+                if (data.history.isEmpty()) {
+                    Text("Complete a few sessions and your trend will appear here.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                } else ProgressChart(values)
             }
         }
-        item { KeyboardHeatmap(stats) { selectedKey = it } }
+        item { KeyboardHeatmap(data.keyStats) { selectedKey = it } }
         item { SectionHeading("Weak transitions") }
-        if (transitions.isEmpty()) {
-            item { EmptyInsight("Not enough transition data", "Practice naturally and ThumbType will surface slow or error-prone pairs.", Icons.Default.SyncAlt) }
+        if (data.weakTransitions.isEmpty()) {
+            item { PremiumFeature("More data needed", "Practice naturally and slow or error-prone pairs will appear here.", Icons.Default.SyncAlt) }
         } else {
-            items(transitions) { (pair, stat) ->
+            items(data.weakTransitions) { (pair, stat) ->
                 PremiumCard {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.error.copy(.10f)) {
                             Text(pair.uppercase(), Modifier.padding(horizontal = 12.dp, vertical = 8.dp), fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.error)
                         }
-                        Spacer(Modifier.width(13.dp))
-                        Column(Modifier.weight(1f)) {
+                        Spacer(Modifier.width(12.dp))
+                        Column {
                             Text("${stat.averageMs} ms average", style = MaterialTheme.typography.titleSmall)
                             Text("${stat.errors} errors • ${stat.accuracy}% accuracy", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                        TinyPill("Train", Icons.Default.AutoFixHigh, MaterialTheme.colorScheme.error)
                     }
                 }
             }
         }
         item { SectionHeading("Achievements") }
         item {
-            Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 data.achievements.chunked(2).forEach { row ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         row.forEach { (title, unlocked) -> AchievementChip(title, unlocked, Modifier.weight(1f)) }
                         if (row.size == 1) Spacer(Modifier.weight(1f))
                     }
@@ -536,21 +428,7 @@ fun PremiumProgressScreen(data: ProgressUiData) {
         }
         item { Spacer(Modifier.height(8.dp)) }
     }
-    selectedKey?.let { char -> KeyDetailDialog(char, stats[char] ?: KeyAggregate()) { selectedKey = null } }
-}
-
-@Composable
-private fun EmptyInsight(title: String, subtitle: String, icon: ImageVector) {
-    Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceVariant.copy(.55f)) {
-        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(Modifier.width(12.dp))
-            Column {
-                Text(title, style = MaterialTheme.typography.titleSmall)
-                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
-    }
+    selectedKey?.let { key -> KeyDetailDialog(key, data.keyStats[key] ?: KeyAggregate()) { selectedKey = null } }
 }
 
 @Composable
@@ -563,39 +441,26 @@ fun PremiumProfileScreen(
     onPrivacy: () -> Unit
 ) {
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        item { AppPageHeader("Profile & settings", "Tune your goals, coaching experience, accessibility and privacy.") }
+        item { AppPageHeader("Profile & settings", "Tune goals, coaching, accessibility and privacy.") }
         item {
-            GradientHero(
-                eyebrow = "Training profile",
-                title = "${profile.targetWpm} WPM • ${profile.targetAccuracy}%",
-                subtitle = "${profile.dailyGoalMinutes} min/day • ${profile.focus.name.lowercase().replaceFirstChar { it.uppercase() }} focus"
-            ) {
-                Surface(Modifier.align(Alignment.CenterEnd).padding(end = 20.dp), shape = CircleShape, color = Color.White.copy(.14f)) {
-                    Column(Modifier.padding(14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(data.xp.toString(), fontWeight = FontWeight.Black, color = Color.White)
-                        Text("XP", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(.82f))
-                    }
-                }
+            GradientHero("Training profile", "${profile.targetWpm} WPM • ${profile.targetAccuracy}%", "${profile.dailyGoalMinutes} min/day • ${profile.focus.name.lowercase().replaceFirstChar { it.uppercase() }} focus") {
+                TinyPill("${data.xp} XP", Icons.Default.Stars, ThumbAmber)
             }
         }
         item { SectionHeading("Goals") }
         item {
             PremiumCard {
                 Text("Target speed", style = MaterialTheme.typography.titleSmall)
+                PremiumChoiceGrid(listOf(30, 40, 50, 60), profile.targetWpm, { "$it" }) { onProfile(profile.copy(targetWpm = it)) }
                 Spacer(Modifier.height(8.dp))
-                ChoiceChipRows(listOf(30, 40, 50, 60), profile.targetWpm, { "$it" }) { onProfile(profile.copy(targetWpm = it)) }
-                Spacer(Modifier.height(12.dp))
                 Text("Daily practice", style = MaterialTheme.typography.titleSmall)
-                Spacer(Modifier.height(8.dp))
-                ChoiceChipRows(listOf(5, 10, 15, 20), profile.dailyGoalMinutes, { "${it}m" }) { onProfile(profile.copy(dailyGoalMinutes = it)) }
+                PremiumChoiceGrid(listOf(5, 10, 15, 20), profile.dailyGoalMinutes, { "${it}m" }) { onProfile(profile.copy(dailyGoalMinutes = it)) }
             }
         }
         item { SectionHeading("Coach") }
         item {
             PremiumCard {
-                Text("Guidance level", style = MaterialTheme.typography.titleSmall)
-                Spacer(Modifier.height(10.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     CoachLevel.entries.forEach { level ->
                         FilterChip(
                             selected = settings.coachLevel == level,
@@ -609,25 +474,13 @@ fun PremiumProfileScreen(
         }
         item { SectionHeading("Experience") }
         item { SettingSwitchRow("Dark mode", "Low-light theme", Icons.Default.DarkMode, settings.darkMode) { onSettings(settings.copy(darkMode = it)) } }
-        item { SettingSwitchRow("Haptics", "Subtle feedback on mistakes", Icons.Default.Vibration, settings.haptics) { onSettings(settings.copy(haptics = it)) } }
-        item { SettingSwitchRow("Sound feedback", "Optional lightweight tones", Icons.Default.VolumeUp, settings.sounds) { onSettings(settings.copy(sounds = it)) } }
+        item { SettingSwitchRow("Haptics", "Feedback on mistakes", Icons.Default.Vibration, settings.haptics) { onSettings(settings.copy(haptics = it)) } }
+        item { SettingSwitchRow("Sound feedback", "Optional training tones", Icons.Default.VolumeUp, settings.sounds) { onSettings(settings.copy(sounds = it)) } }
         item { SettingSwitchRow("Reduced motion", "Minimize nonessential motion", Icons.Default.MotionPhotosOff, settings.reducedMotion) { onSettings(settings.copy(reducedMotion = it)) } }
         item { SettingSwitchRow("Larger text", "Increase interface typography", Icons.Default.TextFields, settings.largeText) { onSettings(settings.copy(largeText = it)) } }
         item { SectionHeading("Privacy & security") }
         item { SettingSwitchRow("Protect screen", "Blocks screenshots while enabled", Icons.Default.Security, settings.privacyScreenProtection) { onSettings(settings.copy(privacyScreenProtection = it)) } }
-        item { ActionRow("Privacy & data", "Offline storage, backup, restore and deletion", Icons.Default.VerifiedUser, MaterialTheme.colorScheme.secondary, onClick = onPrivacy) }
-        item {
-            PremiumCard {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Shield, contentDescription = null, tint = MaterialTheme.colorScheme.secondary)
-                    Spacer(Modifier.width(12.dp))
-                    Column {
-                        Text("Privacy-first core", style = MaterialTheme.typography.titleSmall)
-                        Text("No ads SDK, analytics SDK, WebView or Internet permission in this build.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
-            }
-        }
+        item { ActionRow("Privacy & data", "Backup, restore, local storage and deletion", Icons.Default.VerifiedUser, MaterialTheme.colorScheme.secondary, onClick = onPrivacy) }
         item { Spacer(Modifier.height(8.dp)) }
     }
 }
@@ -635,25 +488,21 @@ fun PremiumProfileScreen(
 @Composable
 fun PremiumPrivacyScreen(onBack: () -> Unit, onExport: () -> Unit, onImport: () -> Unit, onDeleteAll: () -> Unit) {
     var confirm by remember { mutableStateOf(false) }
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(13.dp)) {
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, contentDescription = "Back") }
+                IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Back") }
                 Column {
                     Text("Privacy & data", style = MaterialTheme.typography.headlineMedium)
-                    Text("Your training data should remain under your control.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Your training data stays under your control.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
-        item {
-            GradientHero("Security posture", "Local by default", "Core lessons, analytics and coaching work without an account.") {
-                Icon(Icons.Default.Shield, contentDescription = null, Modifier.align(Alignment.CenterEnd).padding(end = 20.dp).size(54.dp), tint = Color.White.copy(.92f))
-            }
-        }
+        item { GradientHero("Security posture", "Local by default", "Core lessons, analytics and coaching work without an account.") }
         item {
             PremiumCard {
                 Text("Stored locally", style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(8.dp))
                 PremiumPrivacyLine(Icons.Default.Speed, "Performance", "WPM, accuracy, scores and session summaries")
                 PremiumPrivacyLine(Icons.Default.Keyboard, "Technique", "Aggregated key and transition statistics")
                 PremiumPrivacyLine(Icons.Default.EmojiEvents, "Progress", "XP, streaks and completed lessons")
@@ -663,22 +512,22 @@ fun PremiumPrivacyScreen(onBack: () -> Unit, onExport: () -> Unit, onImport: () 
         item {
             PremiumCard {
                 Text("Permissions not requested", style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(8.dp))
-                listOf("Internet access", "Location", "Contacts", "Camera", "Microphone", "Broad storage permission").forEach { item ->
+                Spacer(Modifier.height(6.dp))
+                listOf("Internet access", "Location", "Contacts", "Camera", "Microphone", "Broad storage permission").forEach { label ->
                     Row(Modifier.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.CheckCircle, contentDescription = null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.secondary)
-                        Spacer(Modifier.width(9.dp))
-                        Text(item, style = MaterialTheme.typography.bodyMedium)
+                        Icon(Icons.Default.CheckCircle, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.secondary)
+                        Spacer(Modifier.width(8.dp))
+                        Text(label, style = MaterialTheme.typography.bodyMedium)
                     }
                 }
             }
         }
         item {
             Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.primaryContainer) {
-                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.Top) {
-                    Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                    Spacer(Modifier.width(11.dp))
-                    Text("Touch-side analysis uses screen position. It does not claim to identify your biological thumb from Android touch data.", style = MaterialTheme.typography.bodyMedium)
+                Row(Modifier.padding(15.dp), verticalAlignment = Alignment.Top) {
+                    Icon(Icons.Default.Info, null, tint = MaterialTheme.colorScheme.primary)
+                    Spacer(Modifier.width(10.dp))
+                    Text("Touch-side analysis uses screen position; it does not identify your biological thumb.", style = MaterialTheme.typography.bodyMedium)
                 }
             }
         }
@@ -692,36 +541,23 @@ fun PremiumPrivacyScreen(onBack: () -> Unit, onExport: () -> Unit, onImport: () 
                 color = MaterialTheme.colorScheme.errorContainer
             ) {
                 Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.DeleteForever, contentDescription = null, tint = MaterialTheme.colorScheme.error)
-                    Spacer(Modifier.width(12.dp))
-                    Column(Modifier.weight(1f)) {
+                    Icon(Icons.Default.DeleteForever, null, tint = MaterialTheme.colorScheme.error)
+                    Spacer(Modifier.width(11.dp))
+                    Column {
                         Text("Delete all local data", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.error)
                         Text("Reset this device", style = MaterialTheme.typography.bodySmall)
                     }
-                    Icon(Icons.Default.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.error)
                 }
-            }
-        }
-        item {
-            PremiumCard {
-                Text("Production security baseline", style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(6.dp))
-                Text("R8 hardening, cleartext blocking, disabled automatic app-data backup and private FileProvider exports are already part of the local build.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
-
     if (confirm) {
         AlertDialog(
             onDismissRequest = { confirm = false },
-            icon = { Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+            icon = { Icon(Icons.Default.Warning, null, tint = MaterialTheme.colorScheme.error) },
             title = { Text("Delete all ThumbType data?") },
-            text = { Text("This removes local profile, settings, progress and analytics. Export first if you need a copy.") },
-            confirmButton = {
-                TextButton(onClick = { confirm = false; onDeleteAll() }) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
-                }
-            },
+            text = { Text("This removes local profile, settings, progress and analytics. Export first if needed.") },
+            confirmButton = { TextButton(onClick = { confirm = false; onDeleteAll() }) { Text("Delete", color = MaterialTheme.colorScheme.error) } },
             dismissButton = { TextButton(onClick = { confirm = false }) { Text("Cancel") } }
         )
     }
@@ -730,8 +566,8 @@ fun PremiumPrivacyScreen(onBack: () -> Unit, onExport: () -> Unit, onImport: () 
 @Composable
 private fun PremiumPrivacyLine(icon: ImageVector, title: String, subtitle: String) {
     Row(Modifier.padding(vertical = 6.dp), verticalAlignment = Alignment.Top) {
-        Icon(icon, contentDescription = null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
-        Spacer(Modifier.width(11.dp))
+        Icon(icon, null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
+        Spacer(Modifier.width(10.dp))
         Column {
             Text(title, style = MaterialTheme.typography.titleSmall)
             Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -749,23 +585,16 @@ fun PremiumResultsScreen(
     onWeakness: () -> Unit
 ) {
     val insight = TrainingEngine.coachingInsight(result, profile.targetAccuracy)
-    val isBest = result.netWpm >= personalBest && result.netWpm > 0
-
+    val best = result.netWpm >= personalBest && result.netWpm > 0
     LazyColumn(
         Modifier.fillMaxSize(),
         contentPadding = PaddingValues(20.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        verticalArrangement = Arrangement.spacedBy(13.dp)
     ) {
         item {
-            GradientHero(
-                eyebrow = if (isBest) "New personal best" else "Session complete",
-                title = "${result.netWpm} WPM",
-                subtitle = result.title
-            ) {
-                Surface(Modifier.align(Alignment.CenterEnd).padding(end = 20.dp), shape = CircleShape, color = Color.White.copy(.14f)) {
-                    Icon(if (isBest) Icons.Default.EmojiEvents else Icons.Default.DoneAll, contentDescription = null, Modifier.padding(16.dp).size(34.dp), tint = Color.White)
-                }
+            GradientHero(if (best) "New personal best" else "Session complete", "${result.netWpm} WPM", result.title) {
+                Icon(if (best) Icons.Default.EmojiEvents else Icons.Default.DoneAll, null, Modifier.align(Alignment.CenterEnd).padding(end = 20.dp).size(46.dp), tint = Color.White)
             }
         }
         item {
@@ -774,28 +603,28 @@ fun PremiumResultsScreen(
                 Column(horizontalAlignment = Alignment.Start) {
                     Text("${result.accuracy}%", style = MaterialTheme.typography.displayMedium, color = MaterialTheme.colorScheme.secondary)
                     Text("ACCURACY", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Black)
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(7.dp))
                     TinyPill("${result.mistakes} mistakes", Icons.Default.GpsFixed, if (result.mistakes == 0) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.error)
                 }
             }
         }
         item {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 MetricCard("${result.rhythm}%", "Rhythm", Icons.Default.GraphicEq, Modifier.weight(1f), ThumbAmber)
                 MetricCard("${result.consistency}%", "Consistency", Icons.Default.Timeline, Modifier.weight(1f))
-                MetricCard("${result.thumbTechnique}%", "Reach match", Icons.Default.TouchApp, Modifier.weight(1f), MaterialTheme.colorScheme.secondary)
+                MetricCard("${result.thumbTechnique}%", "Reach", Icons.Default.TouchApp, Modifier.weight(1f), MaterialTheme.colorScheme.secondary)
             }
         }
         item {
             PremiumCard {
                 Text("Session breakdown", style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(10.dp))
                 PercentBar("Accuracy", result.accuracy, MaterialTheme.colorScheme.secondary)
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(8.dp))
                 PercentBar("Rhythm", result.rhythm, ThumbAmber)
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(8.dp))
                 PercentBar("Consistency", result.consistency)
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(10.dp))
                 DetailLine("Raw WPM", "${result.rawWpm}")
                 DetailLine("Attempts", "${result.attempts}")
                 DetailLine("Correct characters", "${result.chars}")
@@ -805,9 +634,9 @@ fun PremiumResultsScreen(
         }
         item {
             Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.primaryContainer) {
-                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.Top) {
-                    Icon(Icons.Default.Psychology, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                    Spacer(Modifier.width(11.dp))
+                Row(Modifier.padding(15.dp), verticalAlignment = Alignment.Top) {
+                    Icon(Icons.Default.Psychology, null, tint = MaterialTheme.colorScheme.primary)
+                    Spacer(Modifier.width(10.dp))
                     Column {
                         Text("Coach insight", style = MaterialTheme.typography.titleSmall)
                         Text(insight, style = MaterialTheme.typography.bodyMedium)
@@ -826,19 +655,17 @@ fun PremiumResultsScreen(
             }
         }
         item {
-            Button(onClick = onContinue, Modifier.fillMaxWidth().height(54.dp), shape = MaterialTheme.shapes.medium) {
-                Text("Continue", fontWeight = FontWeight.Bold)
-            }
+            Button(onClick = onContinue, Modifier.fillMaxWidth().height(54.dp), shape = MaterialTheme.shapes.medium) { Text("Continue", fontWeight = FontWeight.Bold) }
             Spacer(Modifier.height(8.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = onRetry, modifier = Modifier.weight(1f)) {
-                    Icon(Icons.Default.Replay, contentDescription = null)
-                    Spacer(Modifier.width(6.dp))
+                OutlinedButton(onClick = onRetry, Modifier.weight(1f)) {
+                    Icon(Icons.Default.Replay, null)
+                    Spacer(Modifier.width(5.dp))
                     Text("Retry")
                 }
-                OutlinedButton(onClick = onWeakness, modifier = Modifier.weight(1f)) {
-                    Icon(Icons.Default.AutoFixHigh, contentDescription = null)
-                    Spacer(Modifier.width(6.dp))
+                OutlinedButton(onClick = onWeakness, Modifier.weight(1f)) {
+                    Icon(Icons.Default.AutoFixHigh, null)
+                    Spacer(Modifier.width(5.dp))
                     Text("Weakness")
                 }
             }
