@@ -1,6 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- Intentionally no INTERNET, location, contacts, microphone, camera or storage permissions. -->
     <application
+        android:name=".ThumbTypeApplication"
         android:allowBackup="false"
         android:fullBackupContent="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
