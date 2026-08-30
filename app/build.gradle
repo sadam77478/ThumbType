@@ -13,8 +13,8 @@ android {
         applicationId "com.sadam.thumbtype.mobile"
         minSdk 23
         targetSdk 35
-        versionCode 25
-        versionName "4.3-accessibility-adaptive"
+        versionCode 26
+        versionName "4.4-performance-foundation"
     }
 
     buildTypes {
