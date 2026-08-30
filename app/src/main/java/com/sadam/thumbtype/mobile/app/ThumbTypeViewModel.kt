@@ -1,33 +1,52 @@
 package com.sadam.thumbtype.mobile.app
 
-import android.app.Application
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.SavedStateHandle
 import com.sadam.thumbtype.mobile.AppScreen
 import com.sadam.thumbtype.mobile.AppSettings
 import com.sadam.thumbtype.mobile.Lesson
 import com.sadam.thumbtype.mobile.SessionResult
+import com.sadam.thumbtype.mobile.ThumbTypeApplication
 import com.sadam.thumbtype.mobile.UserProfile
 import com.sadam.thumbtype.mobile.app.navigation.ThumbTypeNavigation
-import com.sadam.thumbtype.mobile.data.repository.DefaultThumbTypeRepository
+import com.sadam.thumbtype.mobile.app.state.ThumbTypeSavedState
 import com.sadam.thumbtype.mobile.data.repository.ThumbTypeRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-class ThumbTypeViewModel(application: Application) : AndroidViewModel(application) {
-    private val repository: ThumbTypeRepository = DefaultThumbTypeRepository(application.applicationContext)
+class ThumbTypeViewModel(
+    application: ThumbTypeApplication,
+    private val savedStateHandle: SavedStateHandle
+) : AndroidViewModel(application) {
+    private val repository: ThumbTypeRepository = application.container.repository
+
+    private val restoredLesson = ThumbTypeSavedState.restoreLesson(savedStateHandle)
+    private val restoredScreen = ThumbTypeSavedState.restoreScreen(
+        handle = savedStateHandle,
+        onboarded = repository.isOnboarded()
+    )
 
     private val _uiState = MutableStateFlow(
         ThumbTypeUiState(
             settings = repository.settings(),
             profile = repository.profile(),
-            screen = if (repository.isOnboarded()) AppScreen.Home else AppScreen.Onboarding,
+            screen = restoredScreen,
+            selectedLesson = restoredLesson,
             readModels = repository.readModels()
         )
     )
     val uiState: StateFlow<ThumbTypeUiState> = _uiState.asStateFlow()
 
+    init {
+        ThumbTypeSavedState.saveScreen(savedStateHandle, restoredScreen)
+        if (restoredScreen == AppScreen.Trainer) {
+            ThumbTypeSavedState.saveLesson(savedStateHandle, restoredLesson)
+        }
+    }
+
     fun navigate(screen: AppScreen) {
+        ThumbTypeSavedState.saveScreen(savedStateHandle, screen)
         _uiState.value = _uiState.value.copy(screen = screen)
     }
 
@@ -74,9 +93,12 @@ class ThumbTypeViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun startLesson(lesson: Lesson) {
+        ThumbTypeSavedState.saveLesson(savedStateHandle, lesson)
+        ThumbTypeSavedState.saveScreen(savedStateHandle, AppScreen.Trainer)
         val current = _uiState.value
         _uiState.value = current.copy(
             selectedLesson = lesson,
+            lastResult = null,
             sessionNonce = current.sessionNonce + 1,
             screen = AppScreen.Trainer
         )
@@ -89,6 +111,7 @@ class ThumbTypeViewModel(application: Application) : AndroidViewModel(applicatio
     fun completeSession(result: SessionResult) {
         val current = _uiState.value
         repository.saveSession(result, current.selectedLesson)
+        ThumbTypeSavedState.saveScreen(savedStateHandle, AppScreen.Results)
         _uiState.value = current.copy(
             profile = repository.profile(),
             lastResult = result,
@@ -132,6 +155,8 @@ class ThumbTypeViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun deleteAllLocalData() {
         repository.clearAll()
+        ThumbTypeSavedState.clear(savedStateHandle)
+        ThumbTypeSavedState.saveScreen(savedStateHandle, AppScreen.Onboarding)
         val current = _uiState.value
         _uiState.value = ThumbTypeUiState(
             screen = AppScreen.Onboarding,
