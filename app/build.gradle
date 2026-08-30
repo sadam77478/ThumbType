@@ -44,6 +44,10 @@ android {
         jvmTarget = '17'
     }
 
+    testOptions {
+        unitTests.includeAndroidResources = true
+    }
+
     packaging {
         resources {
             excludes += '/META-INF/{AL2.0,LGPL2.1}'
@@ -72,6 +76,8 @@ dependencies {
     kapt 'androidx.room:room-compiler:2.6.1'
 
     testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.robolectric:robolectric:4.14.1'
+    testImplementation 'androidx.room:room-testing:2.6.1'
     androidTestImplementation 'androidx.room:room-testing:2.6.1'
     androidTestImplementation 'androidx.test.ext:junit:1.2.1'
 
