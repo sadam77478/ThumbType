@@ -1,4 +1,4 @@
-name: Validate and Package ThumbType V3
+name: Validate and Package ThumbType
 
 on:
   workflow_dispatch:
@@ -20,11 +20,33 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Run analytics unit tests
+      - name: Run deterministic unit tests
         run: gradle testDebugUnitTest
 
       - name: Build debug APK
         run: gradle assembleDebug
+
+      - name: Build minified release APK
+        run: gradle assembleRelease
+
+      - name: Enforce APK size budgets
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEBUG_APK="app/build/outputs/apk/debug/app-debug.apk"
+          RELEASE_APK="app/build/outputs/apk/release/app-release-unsigned.apk"
+          DEBUG_BYTES=$(stat -c%s "$DEBUG_APK")
+          RELEASE_BYTES=$(stat -c%s "$RELEASE_APK")
+          DEBUG_BUDGET=$((30 * 1024 * 1024))
+          RELEASE_BUDGET=$((25 * 1024 * 1024))
+          printf "ThumbType performance artifact report\n" > performance-ci.txt
+          printf "debug_apk_bytes=%s\n" "$DEBUG_BYTES" >> performance-ci.txt
+          printf "release_apk_bytes=%s\n" "$RELEASE_BYTES" >> performance-ci.txt
+          printf "debug_budget_bytes=%s\n" "$DEBUG_BUDGET" >> performance-ci.txt
+          printf "release_budget_bytes=%s\n" "$RELEASE_BUDGET" >> performance-ci.txt
+          cat performance-ci.txt
+          test "$DEBUG_BYTES" -le "$DEBUG_BUDGET"
+          test "$RELEASE_BYTES" -le "$RELEASE_BUDGET"
 
       - name: Generate Gradle wrapper
         run: gradle wrapper --gradle-version 8.9
@@ -32,23 +54,37 @@ jobs:
       - name: Package verified Android Studio project
         run: |
           rm -rf package-root
-          mkdir -p package-root/ThumbType_V3_Elite_Verified
-          cp -R app package-root/ThumbType_V3_Elite_Verified/
-          cp build.gradle settings.gradle gradle.properties README.md package-root/ThumbType_V3_Elite_Verified/
-          cp gradlew gradlew.bat package-root/ThumbType_V3_Elite_Verified/
-          cp -R gradle package-root/ThumbType_V3_Elite_Verified/
-          rm -rf package-root/ThumbType_V3_Elite_Verified/app/build
+          mkdir -p package-root/ThumbType_V4_4_Performance_Verified
+          cp -R app package-root/ThumbType_V4_4_Performance_Verified/
+          cp build.gradle settings.gradle gradle.properties README.md package-root/ThumbType_V4_4_Performance_Verified/
+          cp gradlew gradlew.bat package-root/ThumbType_V4_4_Performance_Verified/
+          cp -R gradle package-root/ThumbType_V4_4_Performance_Verified/
+          if [ -d docs ]; then cp -R docs package-root/ThumbType_V4_4_Performance_Verified/; fi
+          cp performance-ci.txt package-root/ThumbType_V4_4_Performance_Verified/
+          rm -rf package-root/ThumbType_V4_4_Performance_Verified/app/build
           cd package-root
-          zip -r ../ThumbType-V3-Elite-Verified-Android-Studio.zip ThumbType_V3_Elite_Verified
+          zip -r ../ThumbType-V4.4-Performance-Verified-Android-Studio.zip ThumbType_V4_4_Performance_Verified
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ThumbType-V3-Debug-APK
+          name: ThumbType-V4.4-Debug-APK
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ThumbType-V3-Elite-Verified-Android-Studio
-          path: ThumbType-V3-Elite-Verified-Android-Studio.zip
+          name: ThumbType-V4.4-Release-Unsigned-APK
+          path: app/build/outputs/apk/release/app-release-unsigned.apk
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ThumbType-V4.4-Performance-Report
+          path: performance-ci.txt
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ThumbType-V4.4-Performance-Verified-Android-Studio
+          path: ThumbType-V4.4-Performance-Verified-Android-Studio.zip
           if-no-files-found: error
