@@ -4,7 +4,7 @@ ThumbType is a mobile-first Android typing trainer focused on two-thumb phone ty
 
 ## Current baseline
 
-- Product line: **ThumbType V4.3 Accessibility & Adaptive Layout**
+- Product line: **ThumbType V4.4 Performance Foundation**
 - Application ID: `com.sadam.thumbtype.mobile`
 - Debug application ID: `com.sadam.thumbtype.mobile.debug`
 - Android: minSdk 23, targetSdk 35, compileSdk 35
@@ -14,6 +14,7 @@ ThumbType is a mobile-first Android typing trainer focused on two-thumb phone ty
 - Training intelligence: deterministic mastery, trend, plateau and adaptive-workout engine
 - UI system: centralized spacing/motion/sizing tokens, premium Material 3 theme and full premium screen routing
 - Adaptive UI: compact/medium/expanded width classes with bounded content and navigation rail on expanded layouts
+- Performance foundation: cached DataStore snapshots, one-pass parallel read-model loading, Compose stability annotations and CI APK-size/release-build gates
 - Gradle: 8.9
 
 ### Stable checkpoints
@@ -34,6 +35,7 @@ Use JDK 17, then from the repository root:
 ```powershell
 .\gradlew testDebugUnitTest
 .\gradlew assembleDebug
+.\gradlew assembleRelease
 ```
 
 The debug APK is generated at:
@@ -42,9 +44,19 @@ The debug APK is generated at:
 app\build\outputs\apk\debug\app-debug.apk
 ```
 
+The current release build is intentionally unsigned during CI and is generated at:
+
+```text
+app\build\outputs\apk\release\app-release-unsigned.apk
+```
+
 ## CI verification
 
-GitHub Actions runs the deterministic unit-test suite before compiling the debug application. The test gate includes training/analytics tests, adaptive-training intelligence tests, responsive width-classification tests and a Robolectric persistence migration/backup round-trip test. A build is only considered verified when the test gate and `assembleDebug` both succeed, after which the APK and Android Studio project are packaged as artifacts.
+GitHub Actions runs the deterministic unit-test suite before compiling the application. The test gate includes training/analytics tests, adaptive-training intelligence tests, responsive width-classification tests, the V4.4 no-redundant-I/O read-model test and a Robolectric persistence migration/backup round-trip test.
+
+A verified CI run must then build both the debug APK and the minified/shrunk release APK. The workflow enforces generous regression ceilings of 30 MiB for debug and 25 MiB for the unsigned release build, writes exact byte counts to `performance-ci.txt`, and only then packages the Android Studio project and artifacts.
+
+These CI checks do **not** replace real-device Android performance measurement. Startup time, jank, touch latency, memory, battery and thermal behavior still require a reproducible benchmark on named Android hardware/emulators.
 
 ## Analytics definitions
 
@@ -108,6 +120,20 @@ V4.3 adds the first dedicated accessibility/device-adaptation layer instead of a
 
 V4.3 improves the architecture for accessibility and large screens, but it does **not** replace real-device validation. TalkBack traversal, switch access, very large Android system font scales, tablets, foldables and unusual aspect ratios still require hands-on device/emulator testing before production accessibility can be declared complete.
 
+## V4.4 performance foundation
+
+V4.4 starts performance engineering by fixing measurable sources of avoidable work rather than claiming unmeasured device speedups.
+
+- Preferences DataStore snapshots are decoded once and cached in-process after first load; every committed preference write refreshes the cache.
+- Feature read models now load each backing dataset once and start independent background reads together.
+- Weak-transition rankings and achievement states are derived from that already-loaded snapshot instead of causing extra Room/DataStore reads.
+- Root UI state and feature read-model snapshots are explicitly marked immutable at the Compose boundary so they can participate in stronger recomposition skipping assumptions.
+- A counting fake-repository unit test fails if read-model generation regresses to duplicate aggregate reads.
+- CI now builds the R8/resource-shrunk release variant in addition to debug and enforces APK-size regression ceilings.
+- Exact CI APK byte counts are packaged in `performance-ci.txt`.
+
+The detailed measurement plan and limitations are documented in `docs/PERFORMANCE_V4_4.md`. Cold/warm startup, frame jank, trainer input latency, memory, battery, thermal behavior and lower-end-device performance remain **real Android benchmark work**, not values inferred from a Linux build server.
+
 ## Security baseline
 
 The current offline build intentionally has no Internet, location, contacts, camera, microphone or broad-storage permissions. Cleartext traffic is disabled, automatic app-data backup is disabled, FileProvider is non-exported, and release builds enable R8 shrinking/obfuscation and resource shrinking.
@@ -116,6 +142,6 @@ Never commit signing keys, passwords, API secrets, service-account files, `.env`
 
 ## Architecture direction
 
-The architecture foundation includes lifecycle-aware StateFlow UI state, ViewModel-owned actions, feature read models, repository abstraction, application dependency container, centralized navigation policy, saved-state restoration, asynchronous persistence, Room, DataStore, deterministic adaptive-training intelligence, a centralized UI design system and an adaptive accessibility layer.
+The architecture foundation includes lifecycle-aware StateFlow UI state, ViewModel-owned actions, feature read models, repository abstraction, application dependency container, centralized navigation policy, saved-state restoration, asynchronous persistence, Room, DataStore, deterministic adaptive-training intelligence, a centralized UI design system, an adaptive accessibility layer and a performance-regression foundation.
 
-Major phases continue to be implemented and verified one at a time. Upcoming production work includes performance benchmarking, broader automated UI/integration testing, CI/CD hardening, account/backend architecture, offline-first cloud sync, security hardening, production signing and Google Play release validation.
+Major phases continue to be implemented and verified one at a time. Upcoming production work includes broader automated UI/integration testing, deeper Android device performance benchmarks and Baseline Profiles, CI/CD hardening, account/backend architecture, offline-first cloud sync, security hardening, production signing and Google Play release validation.
