@@ -86,16 +86,19 @@ fun ThumbTypeRoot() {
     ThumbTypeTheme(state.settings) {
         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             if (state.isLoading) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator()
-                        Spacer(Modifier.height(14.dp))
-                        Text("Loading ThumbType", style = MaterialTheme.typography.titleMedium)
-                        Text(
-                            "Preparing your local training data…",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                Box(Modifier.fillMaxSize().padding(28.dp), contentAlignment = Alignment.Center) {
+                    PremiumCard(modifier = Modifier.widthIn(max = 360.dp)) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            CircularProgressIndicator(strokeWidth = 4.dp)
+                            Spacer(Modifier.height(18.dp))
+                            Text("Loading ThumbType", style = MaterialTheme.typography.titleLarge)
+                            Spacer(Modifier.height(5.dp))
+                            Text(
+                                "Preparing your local training data…",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             } else {
@@ -160,7 +163,10 @@ fun ThumbTypeRoot() {
                             containerColor = MaterialTheme.colorScheme.background,
                             snackbarHost = { SnackbarHost(snackbarHostState) },
                             bottomBar = {
-                                NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
+                                NavigationBar(
+                                    containerColor = MaterialTheme.colorScheme.surface,
+                                    tonalElevation = 8.dp
+                                ) {
                                     ThumbTypeNavigation.bottomDestinations.forEach { target ->
                                         val (icon, label) = when (target) {
                                             AppScreen.Home -> Icons.Default.Home to "Home"
@@ -173,8 +179,15 @@ fun ThumbTypeRoot() {
                                         NavigationBarItem(
                                             selected = state.screen == target,
                                             onClick = { viewModel.navigate(target) },
-                                            icon = { Icon(icon, label) },
-                                            label = { Text(label) }
+                                            icon = { Icon(icon, contentDescription = label) },
+                                            label = { Text(label, style = MaterialTheme.typography.labelSmall) },
+                                            colors = NavigationBarItemDefaults.colors(
+                                                selectedIconColor = MaterialTheme.colorScheme.primary,
+                                                selectedTextColor = MaterialTheme.colorScheme.primary,
+                                                indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
                                         )
                                     }
                                 }
@@ -182,7 +195,7 @@ fun ThumbTypeRoot() {
                         ) { padding ->
                             Box(Modifier.fillMaxSize().padding(padding)) {
                                 when (state.screen) {
-                                    AppScreen.Home -> HomeScreen(
+                                    AppScreen.Home -> PremiumHomeScreen(
                                         data = state.readModels.home,
                                         onStart = viewModel::startLesson,
                                         onNavigate = viewModel::navigate
