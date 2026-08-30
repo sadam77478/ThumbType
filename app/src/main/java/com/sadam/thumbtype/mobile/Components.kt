@@ -89,13 +89,7 @@ fun GradientHero(
             .clip(shape)
             .background(
                 Brush.linearGradient(
-                    colors = listOf(
-                        primary,
-                        primary.copy(alpha = .94f),
-                        secondary.copy(alpha = .90f)
-                    ),
-                    start = Offset.Zero,
-                    end = Offset.Infinite
+                    colors = listOf(primary, primary.copy(alpha = .94f), secondary.copy(alpha = .90f))
                 )
             )
     ) {
@@ -296,6 +290,7 @@ fun ProgressChart(values: List<Int>, modifier: Modifier = Modifier) {
     val line = MaterialTheme.colorScheme.primary
     val grid = MaterialTheme.colorScheme.outlineVariant
     val point = MaterialTheme.colorScheme.secondary
+    val surface = MaterialTheme.colorScheme.surface
     Canvas(modifier.fillMaxWidth().height(165.dp)) {
         val usable = if (values.size < 2) {
             listOf(values.firstOrNull() ?: 0, values.firstOrNull() ?: 0)
@@ -318,7 +313,7 @@ fun ProgressChart(values: List<Int>, modifier: Modifier = Modifier) {
             drawLine(line, Offset(x1, y1), Offset(x2, y2), strokeWidth = 5.dp.toPx(), cap = StrokeCap.Round)
             drawCircle(line, 3.dp.toPx(), Offset(x1, y1))
             if (index == usable.size - 2) {
-                drawCircle(MaterialTheme.colorScheme.surface, 8.dp.toPx(), Offset(x2, y2))
+                drawCircle(surface, 8.dp.toPx(), Offset(x2, y2))
                 drawCircle(point, 5.dp.toPx(), Offset(x2, y2))
             }
         }
@@ -471,7 +466,6 @@ fun PercentBar(label: String, value: Int, accent: Color = MaterialTheme.colorSch
     }
 }
 
-/** Ready-to-use premium card for surfacing the V4 deterministic coaching profile. */
 @Composable
 fun AdaptiveCoachCard(intelligence: TrainingIntelligenceProfile, modifier: Modifier = Modifier) {
     val accent = when (intelligence.priority) {
