@@ -73,6 +73,6 @@ object ThumbTypeSavedState {
             KEY_LESSON_XP,
             KEY_LESSON_LIMIT,
             KEY_LESSON_PRACTICE
-        ).forEach(handle::remove)
+        ).forEach { key -> handle.remove<Any?>(key) }
     }
 }
