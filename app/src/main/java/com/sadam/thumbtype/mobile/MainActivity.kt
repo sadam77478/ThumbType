@@ -9,8 +9,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -104,21 +102,26 @@ fun ThumbTypeRoot() {
             } else {
                 Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))) {
                     when (state.screen) {
-                        AppScreen.Onboarding -> PremiumOnboardingScreen(
-                            initialProfile = state.profile,
-                            onSaveProfile = viewModel::saveProfile,
-                            onBaseline = viewModel::startBaseline,
-                            onSkip = viewModel::skipOnboarding
-                        )
+                        AppScreen.Onboarding -> ThumbTypeAdaptiveContainer(maxContentWidth = 680.dp) {
+                            PremiumOnboardingScreen(
+                                initialProfile = state.profile,
+                                onSaveProfile = viewModel::saveProfile,
+                                onBaseline = viewModel::startBaseline,
+                                onSkip = viewModel::skipOnboarding
+                            )
+                        }
 
                         AppScreen.Trainer -> key(state.sessionNonce) {
-                            PremiumTrainerScreen(
-                                lesson = state.selectedLesson,
-                                settings = state.settings,
-                                profile = state.profile,
-                                onExit = viewModel::goHome,
-                                onComplete = viewModel::completeSession
-                            )
+                            val windowInfo = rememberThumbTypeWindowInfo()
+                            ThumbTypeAdaptiveContainer(maxContentWidth = windowInfo.trainerMaxWidth) {
+                                PremiumTrainerScreen(
+                                    lesson = state.selectedLesson,
+                                    settings = state.settings,
+                                    profile = state.profile,
+                                    onExit = viewModel::goHome,
+                                    onComplete = viewModel::completeSession
+                                )
+                            }
                         }
 
                         AppScreen.Results -> {
@@ -126,104 +129,77 @@ fun ThumbTypeRoot() {
                             if (result == null) {
                                 LaunchedEffect(Unit) { viewModel.goHome() }
                             } else {
-                                PremiumResultsScreen(
-                                    result = result,
-                                    profile = state.profile,
-                                    personalBest = state.readModels.home.bestWpm,
-                                    onContinue = viewModel::goHome,
-                                    onRetry = viewModel::retryCurrentLesson,
-                                    onWeakness = viewModel::startWeaknessLesson
-                                )
+                                ThumbTypeAdaptiveContainer(maxContentWidth = 760.dp) {
+                                    PremiumResultsScreen(
+                                        result = result,
+                                        profile = state.profile,
+                                        personalBest = state.readModels.home.bestWpm,
+                                        onContinue = viewModel::goHome,
+                                        onRetry = viewModel::retryCurrentLesson,
+                                        onWeakness = viewModel::startWeaknessLesson
+                                    )
+                                }
                             }
                         }
 
-                        AppScreen.Privacy -> PremiumPrivacyScreen(
-                            onBack = { viewModel.navigate(AppScreen.Profile) },
-                            onExport = {
-                                viewModel.exportBackup { exportResult ->
-                                    exportResult.onSuccess { json ->
-                                        runCatching { BackupUtils.shareBackup(context, json) }
-                                            .onFailure { showMessage(it.message ?: "Could not export backup") }
-                                    }.onFailure {
-                                        showMessage(it.message ?: "Could not create backup")
-                                    }
-                                }
-                            },
-                            onImport = {
-                                importLauncher.launch(arrayOf("application/json", "text/plain", "application/octet-stream"))
-                            },
-                            onDeleteAll = {
-                                viewModel.deleteAllLocalData {
-                                    showMessage("Local ThumbType data deleted")
-                                }
-                            }
-                        )
-
-                        else -> Scaffold(
-                            containerColor = MaterialTheme.colorScheme.background,
-                            snackbarHost = { SnackbarHost(snackbarHostState) },
-                            bottomBar = {
-                                NavigationBar(
-                                    containerColor = MaterialTheme.colorScheme.surface,
-                                    tonalElevation = 8.dp
-                                ) {
-                                    ThumbTypeNavigation.bottomDestinations.forEach { target ->
-                                        val (icon, label) = when (target) {
-                                            AppScreen.Home -> Icons.Default.Home to "Home"
-                                            AppScreen.Learn -> Icons.Default.School to "Learn"
-                                            AppScreen.Practice -> Icons.Default.Bolt to "Practice"
-                                            AppScreen.Progress -> Icons.Default.AutoGraph to "Progress"
-                                            AppScreen.Profile -> Icons.Default.Person to "Profile"
-                                            else -> Icons.Default.Home to target.name
+                        AppScreen.Privacy -> ThumbTypeAdaptiveContainer(maxContentWidth = 760.dp) {
+                            PremiumPrivacyScreen(
+                                onBack = { viewModel.navigate(AppScreen.Profile) },
+                                onExport = {
+                                    viewModel.exportBackup { exportResult ->
+                                        exportResult.onSuccess { json ->
+                                            runCatching { BackupUtils.shareBackup(context, json) }
+                                                .onFailure { showMessage(it.message ?: "Could not export backup") }
+                                        }.onFailure {
+                                            showMessage(it.message ?: "Could not create backup")
                                         }
-                                        NavigationBarItem(
-                                            selected = state.screen == target,
-                                            onClick = { viewModel.navigate(target) },
-                                            icon = { Icon(icon, contentDescription = label) },
-                                            label = { Text(label, style = MaterialTheme.typography.labelSmall) },
-                                            colors = NavigationBarItemDefaults.colors(
-                                                selectedIconColor = MaterialTheme.colorScheme.primary,
-                                                selectedTextColor = MaterialTheme.colorScheme.primary,
-                                                indicatorColor = MaterialTheme.colorScheme.primaryContainer,
-                                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        )
+                                    }
+                                },
+                                onImport = {
+                                    importLauncher.launch(arrayOf("application/json", "text/plain", "application/octet-stream"))
+                                },
+                                onDeleteAll = {
+                                    viewModel.deleteAllLocalData {
+                                        showMessage("Local ThumbType data deleted")
                                     }
                                 }
-                            }
-                        ) { padding ->
-                            Box(Modifier.fillMaxSize().padding(padding)) {
-                                when (state.screen) {
-                                    AppScreen.Home -> PremiumHomeScreen(
-                                        data = state.readModels.home,
-                                        onStart = viewModel::startLesson,
-                                        onNavigate = viewModel::navigate
-                                    )
+                            )
+                        }
 
-                                    AppScreen.Learn -> PremiumLearnScreen(
-                                        data = state.readModels.learn,
-                                        onStart = viewModel::startLesson
-                                    )
+                        else -> ThumbTypeAppShell(
+                            currentScreen = state.screen,
+                            snackbarHostState = snackbarHostState,
+                            onNavigate = viewModel::navigate
+                        ) {
+                            when (state.screen) {
+                                AppScreen.Home -> PremiumHomeScreen(
+                                    data = state.readModels.home,
+                                    onStart = viewModel::startLesson,
+                                    onNavigate = viewModel::navigate
+                                )
 
-                                    AppScreen.Practice -> PremiumPracticeScreen(
-                                        data = state.readModels.practice,
-                                        onStart = viewModel::startLesson
-                                    )
+                                AppScreen.Learn -> PremiumLearnScreen(
+                                    data = state.readModels.learn,
+                                    onStart = viewModel::startLesson
+                                )
 
-                                    AppScreen.Progress -> PremiumProgressScreen(state.readModels.progress)
+                                AppScreen.Practice -> PremiumPracticeScreen(
+                                    data = state.readModels.practice,
+                                    onStart = viewModel::startLesson
+                                )
 
-                                    AppScreen.Profile -> PremiumProfileScreen(
-                                        data = state.readModels.profile,
-                                        settings = state.settings,
-                                        profile = state.profile,
-                                        onSettings = viewModel::saveSettings,
-                                        onProfile = viewModel::saveProfile,
-                                        onPrivacy = { viewModel.navigate(AppScreen.Privacy) }
-                                    )
+                                AppScreen.Progress -> PremiumProgressScreen(state.readModels.progress)
 
-                                    else -> Unit
-                                }
+                                AppScreen.Profile -> PremiumProfileScreen(
+                                    data = state.readModels.profile,
+                                    settings = state.settings,
+                                    profile = state.profile,
+                                    onSettings = viewModel::saveSettings,
+                                    onProfile = viewModel::saveProfile,
+                                    onPrivacy = { viewModel.navigate(AppScreen.Privacy) }
+                                )
+
+                                else -> Unit
                             }
                         }
                     }
