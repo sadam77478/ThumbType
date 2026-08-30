@@ -20,6 +20,9 @@ jobs:
         with:
           gradle-version: '8.9'
 
+      - name: Run analytics unit tests
+        run: gradle testDebugUnitTest
+
       - name: Build debug APK
         run: gradle assembleDebug
 
