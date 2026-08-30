@@ -1,9 +1,7 @@
 package com.sadam.thumbtype.mobile
 
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
-import androidx.compose.ui.test.onAllNodes
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -30,7 +28,9 @@ class OnboardingJourneyTest {
         composeRule.onNodeWithText("Skip test for now").performClick()
 
         composeRule.waitUntil(timeoutMillis = 8_000) {
-            composeRule.onAllNodes(hasText("Build your baseline")).fetchSemanticsNodes().isNotEmpty()
+            runCatching {
+                composeRule.onNodeWithText("Build your baseline").fetchSemanticsNode()
+            }.isSuccess
         }
         composeRule.onNodeWithText("Build your baseline").assertIsDisplayed()
     }
