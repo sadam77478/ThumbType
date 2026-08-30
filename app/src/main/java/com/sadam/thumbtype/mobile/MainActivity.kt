@@ -18,6 +18,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sadam.thumbtype.mobile.app.ThumbTypeViewModel
+import com.sadam.thumbtype.mobile.app.ThumbTypeViewModelFactory
 import com.sadam.thumbtype.mobile.app.navigation.ThumbTypeNavigation
 import kotlinx.coroutines.launch
 
@@ -30,8 +31,11 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun ThumbTypeRoot(viewModel: ThumbTypeViewModel = viewModel()) {
+fun ThumbTypeRoot() {
     val context = LocalContext.current
+    val application = context.applicationContext as ThumbTypeApplication
+    val viewModelFactory = remember(application) { ThumbTypeViewModelFactory(application) }
+    val viewModel: ThumbTypeViewModel = viewModel(factory = viewModelFactory)
     val activity = context as? ComponentActivity
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
