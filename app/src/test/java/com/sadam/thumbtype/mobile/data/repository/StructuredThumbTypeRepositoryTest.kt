@@ -25,7 +25,7 @@ class StructuredThumbTypeRepositoryTest {
 
     @Test
     fun legacyV3DataMigratesIntoRoomAndDataStoreWithoutLosingProgress() = runBlocking {
-        val context = RuntimeEnvironment.getApplication<Application>()
+        val context: Application = RuntimeEnvironment.getApplication()
         context.getSharedPreferences("thumbtype_elite_v3", Application.MODE_PRIVATE)
             .edit().clear().commit()
         context.deleteDatabase("thumbtype.db")
