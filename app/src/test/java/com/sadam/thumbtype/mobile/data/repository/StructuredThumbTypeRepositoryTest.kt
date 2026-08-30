@@ -24,7 +24,7 @@ import java.io.File
 class StructuredThumbTypeRepositoryTest {
 
     @Test
-    fun legacyV3DataMigratesIntoRoomAndDataStoreWithoutLosingProgress() = runBlocking {
+    fun legacyMigrationAndV5BackupRoundTripPreserveProgress() = runBlocking {
         val context: Application = RuntimeEnvironment.getApplication()
         context.getSharedPreferences("thumbtype_elite_v3", Application.MODE_PRIVATE)
             .edit().clear().commit()
@@ -75,11 +75,29 @@ class StructuredThumbTypeRepositoryTest {
         assertEquals(1, repository.history().size)
         assertTrue(repository.keyStats().isNotEmpty())
         assertTrue(repository.transitionStats().isNotEmpty())
+        assertTrue(repository.todaySeconds() > 0L)
         assertEquals(40, repository.xp())
 
         val backup = repository.exportJson()
         assertTrue(backup.contains("\"version\": 5"))
         assertTrue(backup.contains("\"sessions\""))
         assertTrue(backup.contains("\"dailyPractice\""))
+
+        repository.clearAll()
+        assertTrue(repository.history().isEmpty())
+        assertTrue(repository.keyStats().isEmpty())
+        assertEquals(0, repository.xp())
+
+        val restore = repository.importJson(backup)
+        assertTrue(restore.isSuccess)
+        assertTrue(repository.isOnboarded())
+        assertEquals(60, repository.profile().targetWpm)
+        assertTrue(repository.settings().darkMode)
+        assertTrue(repository.completedLessonIds().contains(1))
+        assertEquals(1, repository.history().size)
+        assertTrue(repository.keyStats().isNotEmpty())
+        assertTrue(repository.transitionStats().isNotEmpty())
+        assertTrue(repository.todaySeconds() > 0L)
+        assertEquals(40, repository.xp())
     }
 }
