@@ -103,6 +103,9 @@ interface ThumbTypeDao {
     @Query("SELECT seconds FROM daily_practice WHERE date = :date LIMIT 1")
     suspend fun practiceSeconds(date: String): Long?
 
+    @Query("SELECT * FROM daily_practice ORDER BY date ASC")
+    suspend fun allDailyPractice(): List<DailyPracticeEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertDailyPractice(value: DailyPracticeEntity)
 
