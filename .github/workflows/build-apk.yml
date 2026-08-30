@@ -20,11 +20,33 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Run deterministic unit tests
+      - name: Run deterministic unit and Robolectric tests
         run: gradle testDebugUnitTest
+
+      - name: Run Android lint
+        run: gradle lintDebug
 
       - name: Build debug APK
         run: gradle assembleDebug
+
+      - name: Compile instrumentation test APK
+        run: gradle assembleDebugAndroidTest
+
+      - name: Enable KVM for Android emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Run Android onboarding reliability journey
+        uses: reactivecircus/android-emulator-runner@v2
+        timeout-minutes: 15
+        with:
+          api-level: 29
+          arch: x86_64
+          profile: pixel_2
+          disable-animations: true
+          script: gradle connectedDebugAndroidTest
 
       - name: Build minified release APK
         run: gradle assembleRelease
@@ -39,7 +61,7 @@ jobs:
           RELEASE_BYTES=$(stat -c%s "$RELEASE_APK")
           DEBUG_BUDGET=$((30 * 1024 * 1024))
           RELEASE_BUDGET=$((25 * 1024 * 1024))
-          printf "ThumbType performance artifact report\n" > performance-ci.txt
+          printf "ThumbType V4.5 testing/reliability artifact report\n" > performance-ci.txt
           printf "debug_apk_bytes=%s\n" "$DEBUG_BYTES" >> performance-ci.txt
           printf "release_apk_bytes=%s\n" "$RELEASE_BYTES" >> performance-ci.txt
           printf "debug_budget_bytes=%s\n" "$DEBUG_BUDGET" >> performance-ci.txt
@@ -54,37 +76,46 @@ jobs:
       - name: Package verified Android Studio project
         run: |
           rm -rf package-root
-          mkdir -p package-root/ThumbType_V4_4_Performance_Verified
-          cp -R app package-root/ThumbType_V4_4_Performance_Verified/
-          cp build.gradle settings.gradle gradle.properties README.md package-root/ThumbType_V4_4_Performance_Verified/
-          cp gradlew gradlew.bat package-root/ThumbType_V4_4_Performance_Verified/
-          cp -R gradle package-root/ThumbType_V4_4_Performance_Verified/
-          if [ -d docs ]; then cp -R docs package-root/ThumbType_V4_4_Performance_Verified/; fi
-          cp performance-ci.txt package-root/ThumbType_V4_4_Performance_Verified/
-          rm -rf package-root/ThumbType_V4_4_Performance_Verified/app/build
+          mkdir -p package-root/ThumbType_V4_5_Testing_Reliability_Verified
+          cp -R app package-root/ThumbType_V4_5_Testing_Reliability_Verified/
+          cp build.gradle settings.gradle gradle.properties README.md package-root/ThumbType_V4_5_Testing_Reliability_Verified/
+          cp gradlew gradlew.bat package-root/ThumbType_V4_5_Testing_Reliability_Verified/
+          cp -R gradle package-root/ThumbType_V4_5_Testing_Reliability_Verified/
+          if [ -d docs ]; then cp -R docs package-root/ThumbType_V4_5_Testing_Reliability_Verified/; fi
+          cp performance-ci.txt package-root/ThumbType_V4_5_Testing_Reliability_Verified/
+          rm -rf package-root/ThumbType_V4_5_Testing_Reliability_Verified/app/build
           cd package-root
-          zip -r ../ThumbType-V4.4-Performance-Verified-Android-Studio.zip ThumbType_V4_4_Performance_Verified
+          zip -r ../ThumbType-V4.5-Testing-Reliability-Verified-Android-Studio.zip ThumbType_V4_5_Testing_Reliability_Verified
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ThumbType-V4.5-Test-Reports
+          path: |
+            app/build/reports
+            app/build/outputs/androidTest-results
+          if-no-files-found: warn
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ThumbType-V4.4-Debug-APK
+          name: ThumbType-V4.5-Debug-APK
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ThumbType-V4.4-Release-Unsigned-APK
+          name: ThumbType-V4.5-Release-Unsigned-APK
           path: app/build/outputs/apk/release/app-release-unsigned.apk
           if-no-files-found: error
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ThumbType-V4.4-Performance-Report
+          name: ThumbType-V4.5-Performance-Report
           path: performance-ci.txt
           if-no-files-found: error
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ThumbType-V4.4-Performance-Verified-Android-Studio
-          path: ThumbType-V4.4-Performance-Verified-Android-Studio.zip
+          name: ThumbType-V4.5-Testing-Reliability-Verified-Android-Studio
+          path: ThumbType-V4.5-Testing-Reliability-Verified-Android-Studio.zip
           if-no-files-found: error
