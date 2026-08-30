@@ -113,7 +113,7 @@ class AppRepository(context: Context) {
                 o.keys().forEach { key ->
                     if (key.isNotEmpty()) {
                         val s = o.getJSONObject(key)
-                        put(key[0], KeyAggregate(s.optInt("presses", 0), s.optInt("errors", 0), s.optLong("totalReactionMs", 0L)))
+                        put(key[0], decodeKeyAggregate(s))
                     }
                 }
             }
@@ -127,7 +127,7 @@ class AppRepository(context: Context) {
             buildMap {
                 o.keys().forEach { key ->
                     val s = o.getJSONObject(key)
-                    put(key.take(4), TransitionAggregate(s.optInt("count", 0), s.optInt("errors", 0), s.optLong("totalMs", 0L)))
+                    put(key.take(4), decodeTransitionAggregate(s))
                 }
             }
         }.getOrDefault(emptyMap())
@@ -169,9 +169,10 @@ class AppRepository(context: Context) {
         result.keyUpdates.forEach { (key, update) ->
             val old = keys[key] ?: KeyAggregate()
             keys[key] = KeyAggregate(
-                presses = old.presses + update.presses,
+                attempts = old.attempts + update.attempts,
+                correct = old.correct + update.correct,
                 errors = old.errors + update.errors,
-                totalReactionMs = old.totalReactionMs + update.totalReactionMs
+                totalCorrectReactionMs = old.totalCorrectReactionMs + update.totalCorrectReactionMs
             )
         }
         editor.putString("key_stats", keyStatsToJson(keys).toString())
@@ -180,9 +181,10 @@ class AppRepository(context: Context) {
         result.transitionUpdates.forEach { (pair, update) ->
             val old = transitions[pair] ?: TransitionAggregate()
             transitions[pair] = TransitionAggregate(
-                count = old.count + update.count,
+                attempts = old.attempts + update.attempts,
+                correct = old.correct + update.correct,
                 errors = old.errors + update.errors,
-                totalMs = old.totalMs + update.totalMs
+                totalSuccessfulMs = old.totalSuccessfulMs + update.totalSuccessfulMs
             )
         }
         editor.putString("transition_stats", transitionStatsToJson(transitions).toString())
@@ -206,14 +208,14 @@ class AppRepository(context: Context) {
     }
 
     fun topWeakKeys(limit: Int = 6): List<Pair<Char, KeyAggregate>> = keyStats().entries
-        .filter { it.key.isLetterOrDigit() && it.value.presses + it.value.errors >= 2 }
-        .sortedByDescending { it.value.errors * 650 + it.value.averageReactionMs }
+        .filter { it.key.isLetterOrDigit() && it.value.attempts >= 2 }
+        .sortedByDescending { it.value.errorRate * 12 + it.value.averageReactionMs }
         .take(limit)
         .map { it.key to it.value }
 
     fun topWeakTransitions(limit: Int = 6): List<Pair<String, TransitionAggregate>> = transitionStats().entries
-        .filter { it.value.count + it.value.errors >= 2 }
-        .sortedByDescending { it.value.errors * 700 + it.value.averageMs }
+        .filter { it.value.attempts >= 2 }
+        .sortedByDescending { it.value.errorRate * 14 + it.value.averageMs }
         .take(limit)
         .map { it.key to it.value }
 
@@ -248,7 +250,7 @@ class AppRepository(context: Context) {
     fun exportJson(): String {
         return JSONObject()
             .put("format", "ThumbTypeBackup")
-            .put("version", 3)
+            .put("version", 4)
             .put("createdAt", System.currentTimeMillis())
             .put("profile", JSONObject(prefs.getString("profile", "{}") ?: "{}"))
             .put("settings", JSONObject(prefs.getString("settings", "{}") ?: "{}"))
@@ -268,7 +270,7 @@ class AppRepository(context: Context) {
         require(raw.length <= 2_000_000) { "Backup is too large." }
         val root = JSONObject(raw)
         require(root.optString("format") == "ThumbTypeBackup") { "Not a ThumbType backup." }
-        require(root.optInt("version", 0) in 1..3) { "Unsupported backup version." }
+        require(root.optInt("version", 0) in 1..4) { "Unsupported backup version." }
 
         val profileObj = root.optJSONObject("profile") ?: JSONObject()
         val settingsObj = root.optJSONObject("settings") ?: JSONObject()
@@ -298,6 +300,54 @@ class AppRepository(context: Context) {
 
     fun clearAll() = prefs.edit().clear().apply()
 
+    private fun decodeKeyAggregate(source: JSONObject): KeyAggregate {
+        if (source.has("attempts")) {
+            val attempts = source.optInt("attempts", 0).coerceAtLeast(0)
+            val correct = source.optInt("correct", 0).coerceIn(0, attempts)
+            val errors = source.optInt("errors", attempts - correct).coerceIn(0, attempts)
+            return KeyAggregate(
+                attempts = attempts,
+                correct = correct,
+                errors = errors,
+                totalCorrectReactionMs = source.optLong("totalCorrectReactionMs", 0L).coerceAtLeast(0L)
+            )
+        }
+
+        // V1-V3 migration: legacy `presses` counted successful presses, not attempts.
+        val legacyCorrect = source.optInt("presses", 0).coerceAtLeast(0)
+        val legacyErrors = source.optInt("errors", 0).coerceAtLeast(0)
+        return KeyAggregate(
+            attempts = legacyCorrect + legacyErrors,
+            correct = legacyCorrect,
+            errors = legacyErrors,
+            totalCorrectReactionMs = source.optLong("totalReactionMs", 0L).coerceAtLeast(0L)
+        )
+    }
+
+    private fun decodeTransitionAggregate(source: JSONObject): TransitionAggregate {
+        if (source.has("attempts")) {
+            val attempts = source.optInt("attempts", 0).coerceAtLeast(0)
+            val correct = source.optInt("correct", 0).coerceIn(0, attempts)
+            val errors = source.optInt("errors", attempts - correct).coerceIn(0, attempts)
+            return TransitionAggregate(
+                attempts = attempts,
+                correct = correct,
+                errors = errors,
+                totalSuccessfulMs = source.optLong("totalSuccessfulMs", 0L).coerceAtLeast(0L)
+            )
+        }
+
+        // V1-V3 migration: legacy `count` represented successful transitions.
+        val legacyCorrect = source.optInt("count", 0).coerceAtLeast(0)
+        val legacyErrors = source.optInt("errors", 0).coerceAtLeast(0)
+        return TransitionAggregate(
+            attempts = legacyCorrect + legacyErrors,
+            correct = legacyCorrect,
+            errors = legacyErrors,
+            totalSuccessfulMs = source.optLong("totalMs", 0L).coerceAtLeast(0L)
+        )
+    }
+
     private fun historyToJson(items: List<HistoryEntry>): JSONArray = JSONArray().apply {
         items.forEach { h ->
             put(JSONObject()
@@ -313,18 +363,20 @@ class AppRepository(context: Context) {
     private fun keyStatsToJson(items: Map<Char, KeyAggregate>): JSONObject = JSONObject().apply {
         items.forEach { (key, s) ->
             put(key.toString(), JSONObject()
-                .put("presses", s.presses)
+                .put("attempts", s.attempts)
+                .put("correct", s.correct)
                 .put("errors", s.errors)
-                .put("totalReactionMs", s.totalReactionMs))
+                .put("totalCorrectReactionMs", s.totalCorrectReactionMs))
         }
     }
 
     private fun transitionStatsToJson(items: Map<String, TransitionAggregate>): JSONObject = JSONObject().apply {
         items.forEach { (pair, s) ->
             put(pair, JSONObject()
-                .put("count", s.count)
+                .put("attempts", s.attempts)
+                .put("correct", s.correct)
                 .put("errors", s.errors)
-                .put("totalMs", s.totalMs))
+                .put("totalSuccessfulMs", s.totalSuccessfulMs))
         }
     }
 }

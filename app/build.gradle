@@ -12,8 +12,8 @@ android {
         applicationId "com.sadam.thumbtype.mobile"
         minSdk 23
         targetSdk 35
-        versionCode 20
-        versionName "3.0-elite"
+        versionCode 21
+        versionName "3.5-analytics"
     }
 
     buildTypes {
@@ -64,5 +64,6 @@ dependencies {
     implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7'
     implementation 'androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7'
     implementation 'androidx.lifecycle:lifecycle-viewmodel-savedstate:2.8.7'
+    testImplementation 'junit:junit:4.13.2'
     debugImplementation 'androidx.compose.ui:ui-tooling'
 }

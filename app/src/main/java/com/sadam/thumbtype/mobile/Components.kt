@@ -215,7 +215,7 @@ fun ProgressChart(values: List<Int>, modifier: Modifier = Modifier) {
 
 @Composable
 fun KeyboardHeatmap(stats: Map<Char, KeyAggregate>, onKeySelected: (Char) -> Unit) {
-    val worst = stats.values.maxOfOrNull { it.errors * 500 + it.averageReactionMs }?.coerceAtLeast(1) ?: 1
+    val worst = stats.values.maxOfOrNull { it.errorRate * 12 + it.averageReactionMs }?.coerceAtLeast(1) ?: 1
     PremiumCard {
         Text("Keyboard heatmap", style = MaterialTheme.typography.titleMedium)
         Spacer(Modifier.height(4.dp))
@@ -225,7 +225,7 @@ fun KeyboardHeatmap(stats: Map<Char, KeyAggregate>, onKeySelected: (Char) -> Uni
             Row(Modifier.fillMaxWidth().padding(horizontal = (rowIndex * 10).dp), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                 row.forEach { char ->
                     val stat = stats[char] ?: KeyAggregate()
-                    val load = (stat.errors * 500 + stat.averageReactionMs).toFloat() / worst
+                    val load = (stat.errorRate * 12 + stat.averageReactionMs).toFloat() / worst
                     Surface(
                         Modifier.weight(1f).height(38.dp).clickable { onKeySelected(char) },
                         shape = RoundedCornerShape(10.dp),
@@ -248,7 +248,8 @@ fun KeyDetailDialog(char: Char, stat: KeyAggregate, onDismiss: () -> Unit) {
         title = { Text("Key ${char.uppercase()}") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                DetailLine("Presses", stat.presses.toString())
+                DetailLine("Attempts", stat.attempts.toString())
+                DetailLine("Correct", stat.correct.toString())
                 DetailLine("Errors", stat.errors.toString())
                 DetailLine("Accuracy", "${stat.accuracy}%")
                 DetailLine("Average reaction", if (stat.averageReactionMs == 0) "Not enough data" else "${stat.averageReactionMs} ms")
