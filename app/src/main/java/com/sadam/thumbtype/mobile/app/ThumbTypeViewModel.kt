@@ -2,25 +2,27 @@ package com.sadam.thumbtype.mobile.app
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
-import com.sadam.thumbtype.mobile.AppRepository
 import com.sadam.thumbtype.mobile.AppScreen
 import com.sadam.thumbtype.mobile.AppSettings
 import com.sadam.thumbtype.mobile.Lesson
 import com.sadam.thumbtype.mobile.SessionResult
-import com.sadam.thumbtype.mobile.TrainingEngine
 import com.sadam.thumbtype.mobile.UserProfile
+import com.sadam.thumbtype.mobile.app.navigation.ThumbTypeNavigation
+import com.sadam.thumbtype.mobile.data.repository.DefaultThumbTypeRepository
+import com.sadam.thumbtype.mobile.data.repository.ThumbTypeRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 class ThumbTypeViewModel(application: Application) : AndroidViewModel(application) {
-    val repository = AppRepository(application.applicationContext)
+    private val repository: ThumbTypeRepository = DefaultThumbTypeRepository(application.applicationContext)
 
     private val _uiState = MutableStateFlow(
         ThumbTypeUiState(
             settings = repository.settings(),
             profile = repository.profile(),
-            screen = if (repository.isOnboarded()) AppScreen.Home else AppScreen.Onboarding
+            screen = if (repository.isOnboarded()) AppScreen.Home else AppScreen.Onboarding,
+            readModels = repository.readModels()
         )
     )
     val uiState: StateFlow<ThumbTypeUiState> = _uiState.asStateFlow()
@@ -32,19 +34,17 @@ class ThumbTypeViewModel(application: Application) : AndroidViewModel(applicatio
     fun goHome() = navigate(AppScreen.Home)
 
     fun onBack() {
-        val current = _uiState.value.screen
-        val destination = when (current) {
-            AppScreen.Trainer, AppScreen.Results -> AppScreen.Home
-            AppScreen.Privacy -> AppScreen.Profile
-            AppScreen.Home, AppScreen.Onboarding -> current
-            else -> AppScreen.Home
-        }
-        navigate(destination)
+        navigate(ThumbTypeNavigation.backDestination(_uiState.value.screen))
     }
 
     fun saveProfile(profile: UserProfile) {
         repository.saveProfile(profile)
-        _uiState.value = _uiState.value.copy(profile = profile)
+        val current = _uiState.value
+        _uiState.value = current.copy(
+            profile = profile,
+            readModels = repository.readModels(),
+            refreshToken = current.refreshToken + 1
+        )
     }
 
     fun saveSettings(settings: AppSettings) {
@@ -92,16 +92,14 @@ class ThumbTypeViewModel(application: Application) : AndroidViewModel(applicatio
         _uiState.value = current.copy(
             profile = repository.profile(),
             lastResult = result,
+            readModels = repository.readModels(),
             refreshToken = current.refreshToken + 1,
             screen = AppScreen.Results
         )
     }
 
     fun startWeaknessLesson() {
-        val weakText = TrainingEngine.generateWeakDrill(
-            repository.keyStats(),
-            repository.transitionStats()
-        )
+        val weakText = _uiState.value.readModels.practice.weakDrill
         startLesson(
             Lesson(
                 id = -777,
@@ -123,6 +121,7 @@ class ThumbTypeViewModel(application: Application) : AndroidViewModel(applicatio
             _uiState.value = current.copy(
                 settings = repository.settings(),
                 profile = repository.profile(),
+                readModels = repository.readModels(),
                 refreshToken = current.refreshToken + 1
             )
         }
@@ -136,6 +135,7 @@ class ThumbTypeViewModel(application: Application) : AndroidViewModel(applicatio
         val current = _uiState.value
         _uiState.value = ThumbTypeUiState(
             screen = AppScreen.Onboarding,
+            readModels = repository.readModels(),
             refreshToken = current.refreshToken + 1,
             sessionNonce = current.sessionNonce + 1
         )
