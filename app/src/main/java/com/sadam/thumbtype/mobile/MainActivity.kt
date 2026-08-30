@@ -15,6 +15,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.sadam.thumbtype.mobile.app.ThumbTypeViewModel
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -26,17 +29,11 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun ThumbTypeRoot() {
+fun ThumbTypeRoot(viewModel: ThumbTypeViewModel = viewModel()) {
     val context = LocalContext.current
     val activity = context as? ComponentActivity
-    val repo = remember { AppRepository(context.applicationContext) }
-    var settings by remember { mutableStateOf(repo.settings()) }
-    var profile by remember { mutableStateOf(repo.profile()) }
-    var screen by remember { mutableStateOf(if (repo.isOnboarded()) AppScreen.Home else AppScreen.Onboarding) }
-    var selectedLesson by remember { mutableStateOf(LessonRepository.lessons.first()) }
-    var lastResult by remember { mutableStateOf<SessionResult?>(null) }
-    var refresh by remember { mutableIntStateOf(0) }
-    var sessionNonce by remember { mutableIntStateOf(0) }
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val repo = viewModel.repository
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
@@ -44,15 +41,9 @@ fun ThumbTypeRoot() {
         scope.launch { snackbarHostState.showSnackbar(message) }
     }
 
-    fun startLesson(lesson: Lesson) {
-        selectedLesson = lesson
-        sessionNonce++
-        screen = AppScreen.Trainer
-    }
-
     SideEffect {
         activity?.window?.let { window ->
-            if (settings.privacyScreenProtection) {
+            if (state.settings.privacyScreenProtection) {
                 window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
             } else {
                 window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
@@ -63,14 +54,13 @@ fun ThumbTypeRoot() {
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
             val result = runCatching {
-                val text = context.contentResolver.openInputStream(uri)?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }
+                val text = context.contentResolver.openInputStream(uri)
+                    ?.bufferedReader(Charsets.UTF_8)
+                    ?.use { it.readText() }
                     ?: error("Could not read backup")
-                repo.importJson(text).getOrThrow()
+                viewModel.restoreBackup(text).getOrThrow()
             }
             if (result.isSuccess) {
-                settings = repo.settings()
-                profile = repo.profile()
-                refresh++
                 showMessage("Backup restored successfully")
             } else {
                 showMessage(result.exceptionOrNull()?.message ?: "Could not restore backup")
@@ -78,94 +68,58 @@ fun ThumbTypeRoot() {
         }
     }
 
-    BackHandler(enabled = screen != AppScreen.Home && screen != AppScreen.Onboarding) {
-        screen = when (screen) {
-            AppScreen.Trainer, AppScreen.Results -> AppScreen.Home
-            AppScreen.Privacy -> AppScreen.Profile
-            else -> AppScreen.Home
-        }
+    BackHandler(enabled = state.screen != AppScreen.Home && state.screen != AppScreen.Onboarding) {
+        viewModel.onBack()
     }
 
-    ThumbTypeTheme(settings) {
+    ThumbTypeTheme(state.settings) {
         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))) {
-                when (screen) {
+                when (state.screen) {
                     AppScreen.Onboarding -> OnboardingScreen(
-                        initialProfile = profile,
-                        onSaveProfile = {
-                            profile = it
-                            repo.saveProfile(it)
-                        },
-                        onBaseline = {
-                            startLesson(
-                                Lesson(
-                                    id = 0,
-                                    stage = 0,
-                                    title = "Baseline Test",
-                                    subtitle = "Measure your starting speed and accuracy",
-                                    text = "the quick brown fox jumps over the lazy dog then sends a short mobile message with calm accurate rhythm",
-                                    skill = "Baseline",
-                                    xp = 50,
-                                    timeLimitSeconds = 60,
-                                    isPractice = true
-                                )
-                            )
-                        },
-                        onSkip = {
-                            repo.setOnboarded(true)
-                            screen = AppScreen.Home
-                        }
+                        initialProfile = state.profile,
+                        onSaveProfile = viewModel::saveProfile,
+                        onBaseline = viewModel::startBaseline,
+                        onSkip = viewModel::skipOnboarding
                     )
 
-                    AppScreen.Trainer -> key(sessionNonce) {
+                    AppScreen.Trainer -> key(state.sessionNonce) {
                         TrainerScreen(
-                            lesson = selectedLesson,
-                            settings = settings,
-                            profile = profile,
-                            onExit = { screen = AppScreen.Home },
-                            onComplete = { result ->
-                                repo.saveSession(result, selectedLesson)
-                                profile = repo.profile()
-                                lastResult = result
-                                refresh++
-                                screen = AppScreen.Results
-                            }
+                            lesson = state.selectedLesson,
+                            settings = state.settings,
+                            profile = state.profile,
+                            onExit = viewModel::goHome,
+                            onComplete = viewModel::completeSession
                         )
                     }
 
                     AppScreen.Results -> {
-                        val result = lastResult
+                        val result = state.lastResult
                         if (result == null) {
-                            screen = AppScreen.Home
+                            LaunchedEffect(Unit) { viewModel.goHome() }
                         } else {
                             ResultsScreen(
                                 result = result,
-                                profile = profile,
+                                profile = state.profile,
                                 personalBest = repo.bestWpm(),
-                                onContinue = { screen = AppScreen.Home },
-                                onRetry = { startLesson(selectedLesson) },
-                                onWeakness = {
-                                    val weakText = TrainingEngine.generateWeakDrill(repo.keyStats(), repo.transitionStats())
-                                    startLesson(Lesson(-777, 0, "Weakness Trainer", "Built from your latest performance", weakText, "Weakness", 35, isPractice = true))
-                                }
+                                onContinue = viewModel::goHome,
+                                onRetry = viewModel::retryCurrentLesson,
+                                onWeakness = viewModel::startWeaknessLesson
                             )
                         }
                     }
 
                     AppScreen.Privacy -> PrivacyScreen(
-                        onBack = { screen = AppScreen.Profile },
+                        onBack = { viewModel.navigate(AppScreen.Profile) },
                         onExport = {
-                            runCatching { BackupUtils.shareBackup(context, repo.exportJson()) }
+                            runCatching { BackupUtils.shareBackup(context, viewModel.exportBackupJson()) }
                                 .onFailure { showMessage(it.message ?: "Could not export backup") }
                         },
-                        onImport = { importLauncher.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) },
+                        onImport = {
+                            importLauncher.launch(arrayOf("application/json", "text/plain", "application/octet-stream"))
+                        },
                         onDeleteAll = {
-                            repo.clearAll()
-                            settings = AppSettings()
-                            profile = UserProfile()
-                            lastResult = null
-                            refresh++
-                            screen = AppScreen.Onboarding
+                            viewModel.deleteAllLocalData()
                             showMessage("Local ThumbType data deleted")
                         }
                     )
@@ -184,8 +138,8 @@ fun ThumbTypeRoot() {
                                 )
                                 items.forEach { (target, icon, label) ->
                                     NavigationBarItem(
-                                        selected = screen == target,
-                                        onClick = { screen = target },
+                                        selected = state.screen == target,
+                                        onClick = { viewModel.navigate(target) },
                                         icon = { Icon(icon, label) },
                                         label = { Text(label) }
                                     )
@@ -194,33 +148,42 @@ fun ThumbTypeRoot() {
                         }
                     ) { padding ->
                         Box(Modifier.fillMaxSize().padding(padding)) {
-                            when (screen) {
-                                AppScreen.Home -> HomeScreen(repo, refresh, ::startLesson) { screen = it }
-                                AppScreen.Learn -> LearnScreen(repo, refresh, ::startLesson)
-                                AppScreen.Practice -> PracticeScreen(repo, ::startLesson)
-                                AppScreen.Progress -> ProgressScreen(repo, refresh)
+                            when (state.screen) {
+                                AppScreen.Home -> HomeScreen(
+                                    repo,
+                                    state.refreshToken,
+                                    viewModel::startLesson,
+                                    viewModel::navigate
+                                )
+
+                                AppScreen.Learn -> LearnScreen(
+                                    repo,
+                                    state.refreshToken,
+                                    viewModel::startLesson
+                                )
+
+                                AppScreen.Practice -> PracticeScreen(repo, viewModel::startLesson)
+                                AppScreen.Progress -> ProgressScreen(repo, state.refreshToken)
                                 AppScreen.Profile -> ProfileScreen(
                                     repo = repo,
-                                    settings = settings,
-                                    profile = profile,
-                                    onSettings = {
-                                        settings = it
-                                        repo.saveSettings(it)
-                                    },
-                                    onProfile = {
-                                        profile = it
-                                        repo.saveProfile(it)
-                                    },
-                                    onPrivacy = { screen = AppScreen.Privacy }
+                                    settings = state.settings,
+                                    profile = state.profile,
+                                    onSettings = viewModel::saveSettings,
+                                    onProfile = viewModel::saveProfile,
+                                    onPrivacy = { viewModel.navigate(AppScreen.Privacy) }
                                 )
+
                                 else -> Unit
                             }
                         }
                     }
                 }
 
-                if (screen in listOf(AppScreen.Onboarding, AppScreen.Trainer, AppScreen.Results, AppScreen.Privacy)) {
-                    SnackbarHost(snackbarHostState, Modifier.align(androidx.compose.ui.Alignment.BottomCenter).navigationBarsPadding())
+                if (state.screen in listOf(AppScreen.Onboarding, AppScreen.Trainer, AppScreen.Results, AppScreen.Privacy)) {
+                    SnackbarHost(
+                        snackbarHostState,
+                        Modifier.align(androidx.compose.ui.Alignment.BottomCenter).navigationBarsPadding()
+                    )
                 }
             }
         }
