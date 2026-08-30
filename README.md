@@ -4,15 +4,17 @@ ThumbType is a mobile-first Android typing trainer focused on two-thumb phone ty
 
 ## Current baseline
 
-- Product line: ThumbType V3.5 Analytics
+- Product line: ThumbType V3.6 Persistence
 - Application ID: `com.sadam.thumbtype.mobile`
 - Debug application ID: `com.sadam.thumbtype.mobile.debug`
 - Android: minSdk 23, targetSdk 35, compileSdk 35
 - Java/Kotlin target: JVM 17
 - UI: Jetpack Compose / Material 3
+- Persistence: Room + Preferences DataStore
 - Gradle: 8.9
 - Stable pre-hardening checkpoint: `ab1330ffc5438817751ccaa91d57eeab50898f00`
 - Architecture checkpoint: `checkpoint/v3.4-architecture-part-c`
+- Analytics checkpoint: `checkpoint/v3.5-analytics-correctness`
 
 ## Build locally
 
@@ -31,7 +33,7 @@ app\build\outputs\apk\debug\app-debug.apk
 
 ## CI verification
 
-GitHub Actions now runs deterministic analytics unit tests before compiling the debug application. A build is only considered verified when both the unit-test gate and `assembleDebug` succeed, after which the APK and Android Studio project are packaged as artifacts.
+GitHub Actions runs the deterministic unit-test suite before compiling the debug application. The test gate now includes both training/analytics tests and a Robolectric persistence migration/backup round-trip test. A build is only considered verified when the test gate and `assembleDebug` both succeed, after which the APK and Android Studio project are packaged as artifacts.
 
 ## V3.5 analytics definitions
 
@@ -47,7 +49,37 @@ GitHub Actions now runs deterministic analytics unit tests before compiling the 
 - **Transition accuracy:** successful attempts at the second key of an intended adjacent pair divided by all attempts at that transition.
 - **Transition latency:** time from the preceding correctly completed key through successful completion of the next key, including time spent recovering from mistakes.
 
-Legacy V1-V3 key and transition statistics are migrated when read: old successful `presses`/`count` values are combined with legacy error counts to reconstruct total attempts. New backups use format version 4 while imports remain compatible with backup versions 1 through 4.
+## V3.6 persistence architecture
+
+ThumbType no longer uses SharedPreferences/JSON as the primary long-term store for growing training data.
+
+**Room database (`thumbtype.db`) stores:**
+
+- Session history with detailed result metrics
+- Per-key analytics
+- Per-transition analytics
+- Completed lesson progress
+- Daily practice totals
+
+**Preferences DataStore stores:**
+
+- Onboarding state
+- Theme, haptics, sound and accessibility preferences
+- Coaching level
+- Training goals and baseline
+- XP and lifetime counters
+- Best WPM
+- Streak and last-practice date
+
+Repository operations are asynchronous `suspend` functions. The ViewModel performs persistence work on an IO dispatcher so database/file work is no longer intentionally performed on the Compose UI path.
+
+### Existing-user migration
+
+On first V3.6 launch, the structured repository checks for the legacy `thumbtype_elite_v3` SharedPreferences store. Existing profile, settings, XP, totals, streak, lesson completion, history, key statistics, transition statistics and current-day practice are copied into Room/DataStore once. The legacy store is left untouched after migration to preserve a rollback path. Intentionally deleting all local data clears both the structured data and the legacy rollback store so deleted data cannot reappear.
+
+### Backup format
+
+New backups use **ThumbType backup version 5** and include structured sessions plus key/transition analytics and daily-practice records. Import remains compatible with backup versions 1 through 5. The automated persistence test verifies legacy migration, export, deletion and V5 restore as one round trip.
 
 ## Security baseline
 
@@ -57,4 +89,4 @@ Never commit signing keys, passwords, API secrets, service-account files, `.env`
 
 ## Architecture direction
 
-The architecture foundation now includes lifecycle-aware StateFlow UI state, ViewModel-owned application actions, feature read models, a repository abstraction, an application dependency container, centralized navigation policy and saved-state restoration for navigation/selected lessons. Future production work will introduce structured Room/DataStore persistence, deeper testing, accessibility, performance benchmarks, account/backend infrastructure, offline-first sync and release hardening. Major phases should continue to be implemented and verified one at a time rather than through large unverified rewrites.
+The architecture foundation includes lifecycle-aware StateFlow UI state, ViewModel-owned application actions, feature read models, a repository abstraction, an application dependency container, centralized navigation policy, saved-state restoration, asynchronous persistence, Room and DataStore. Future production work will continue with deeper training intelligence, premium UI/UX, accessibility, performance benchmarks, broader testing, account/backend infrastructure, offline-first cloud sync and release hardening. Major phases should continue to be implemented and verified one at a time rather than through large unverified rewrites.
