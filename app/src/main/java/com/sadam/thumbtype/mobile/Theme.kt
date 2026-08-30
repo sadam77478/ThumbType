@@ -99,20 +99,20 @@ private val ThumbTypeShapes = Shapes(
 private fun typography(scale: Float): Typography {
     val family = FontFamily.SansSerif
     return Typography(
-        displayLarge = TextStyle(family, FontWeight.Black, (48 * scale).sp, lineHeight = (52 * scale).sp, letterSpacing = (-1.1 * scale).sp),
-        displayMedium = TextStyle(family, FontWeight.Black, (40 * scale).sp, lineHeight = (45 * scale).sp, letterSpacing = (-0.8 * scale).sp),
-        headlineLarge = TextStyle(family, FontWeight.Black, (31 * scale).sp, lineHeight = (36 * scale).sp, letterSpacing = (-0.45 * scale).sp),
-        headlineMedium = TextStyle(family, FontWeight.ExtraBold, (25 * scale).sp, lineHeight = (30 * scale).sp, letterSpacing = (-0.25 * scale).sp),
-        headlineSmall = TextStyle(family, FontWeight.ExtraBold, (22 * scale).sp, lineHeight = (27 * scale).sp),
-        titleLarge = TextStyle(family, FontWeight.Bold, (20 * scale).sp, lineHeight = (26 * scale).sp),
-        titleMedium = TextStyle(family, FontWeight.Bold, (17 * scale).sp, lineHeight = (23 * scale).sp),
-        titleSmall = TextStyle(family, FontWeight.SemiBold, (15 * scale).sp, lineHeight = (20 * scale).sp),
-        bodyLarge = TextStyle(family, FontWeight.Normal, (16 * scale).sp, lineHeight = (24 * scale).sp),
-        bodyMedium = TextStyle(family, FontWeight.Normal, (14 * scale).sp, lineHeight = (21 * scale).sp),
-        bodySmall = TextStyle(family, FontWeight.Normal, (12 * scale).sp, lineHeight = (18 * scale).sp),
-        labelLarge = TextStyle(family, FontWeight.Bold, (14 * scale).sp, lineHeight = (19 * scale).sp),
-        labelMedium = TextStyle(family, FontWeight.SemiBold, (12 * scale).sp, lineHeight = (17 * scale).sp),
-        labelSmall = TextStyle(family, FontWeight.SemiBold, (10 * scale).sp, lineHeight = (14 * scale).sp, letterSpacing = (0.2 * scale).sp)
+        displayLarge = TextStyle(fontFamily = family, fontWeight = FontWeight.Black, fontSize = (48 * scale).sp, lineHeight = (52 * scale).sp, letterSpacing = (-1.1 * scale).sp),
+        displayMedium = TextStyle(fontFamily = family, fontWeight = FontWeight.Black, fontSize = (40 * scale).sp, lineHeight = (45 * scale).sp, letterSpacing = (-0.8 * scale).sp),
+        headlineLarge = TextStyle(fontFamily = family, fontWeight = FontWeight.Black, fontSize = (31 * scale).sp, lineHeight = (36 * scale).sp, letterSpacing = (-0.45 * scale).sp),
+        headlineMedium = TextStyle(fontFamily = family, fontWeight = FontWeight.ExtraBold, fontSize = (25 * scale).sp, lineHeight = (30 * scale).sp, letterSpacing = (-0.25 * scale).sp),
+        headlineSmall = TextStyle(fontFamily = family, fontWeight = FontWeight.ExtraBold, fontSize = (22 * scale).sp, lineHeight = (27 * scale).sp),
+        titleLarge = TextStyle(fontFamily = family, fontWeight = FontWeight.Bold, fontSize = (20 * scale).sp, lineHeight = (26 * scale).sp),
+        titleMedium = TextStyle(fontFamily = family, fontWeight = FontWeight.Bold, fontSize = (17 * scale).sp, lineHeight = (23 * scale).sp),
+        titleSmall = TextStyle(fontFamily = family, fontWeight = FontWeight.SemiBold, fontSize = (15 * scale).sp, lineHeight = (20 * scale).sp),
+        bodyLarge = TextStyle(fontFamily = family, fontWeight = FontWeight.Normal, fontSize = (16 * scale).sp, lineHeight = (24 * scale).sp),
+        bodyMedium = TextStyle(fontFamily = family, fontWeight = FontWeight.Normal, fontSize = (14 * scale).sp, lineHeight = (21 * scale).sp),
+        bodySmall = TextStyle(fontFamily = family, fontWeight = FontWeight.Normal, fontSize = (12 * scale).sp, lineHeight = (18 * scale).sp),
+        labelLarge = TextStyle(fontFamily = family, fontWeight = FontWeight.Bold, fontSize = (14 * scale).sp, lineHeight = (19 * scale).sp),
+        labelMedium = TextStyle(fontFamily = family, fontWeight = FontWeight.SemiBold, fontSize = (12 * scale).sp, lineHeight = (17 * scale).sp),
+        labelSmall = TextStyle(fontFamily = family, fontWeight = FontWeight.SemiBold, fontSize = (10 * scale).sp, lineHeight = (14 * scale).sp, letterSpacing = (0.2 * scale).sp)
     )
 }
 
