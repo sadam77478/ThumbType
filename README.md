@@ -4,7 +4,7 @@ ThumbType is a mobile-first Android typing trainer focused on two-thumb phone ty
 
 ## Current baseline
 
-- Product line: ThumbType V4.1 Premium UI Foundation
+- Product line: **ThumbType V4.2 Premium Experience**
 - Application ID: `com.sadam.thumbtype.mobile`
 - Debug application ID: `com.sadam.thumbtype.mobile.debug`
 - Android: minSdk 23, targetSdk 35, compileSdk 35
@@ -12,13 +12,17 @@ ThumbType is a mobile-first Android typing trainer focused on two-thumb phone ty
 - UI: Jetpack Compose / Material 3
 - Persistence: Room + Preferences DataStore
 - Training intelligence: deterministic mastery, trend, plateau and adaptive-workout engine
-- UI foundation: centralized spacing/motion/sizing tokens, premium Material 3 theme, refined shared components and adaptive Home dashboard
+- UI system: centralized spacing/motion/sizing tokens, premium Material 3 theme and full premium screen routing
 - Gradle: 8.9
-- Stable pre-hardening checkpoint: `ab1330ffc5438817751ccaa91d57eeab50898f00`
-- Architecture checkpoint: `checkpoint/v3.4-architecture-part-c`
-- Analytics checkpoint: `checkpoint/v3.5-analytics-correctness`
-- Persistence checkpoint: `checkpoint/v3.6-persistence`
-- Training-intelligence checkpoint: `checkpoint/v4.0-training-intelligence`
+
+### Stable checkpoints
+
+- Pre-hardening baseline: `ab1330ffc5438817751ccaa91d57eeab50898f00`
+- Architecture: `checkpoint/v3.4-architecture-part-c`
+- Analytics: `checkpoint/v3.5-analytics-correctness`
+- Persistence: `checkpoint/v3.6-persistence`
+- Training intelligence: `checkpoint/v4.0-training-intelligence`
+- UI foundation: `checkpoint/v4.1-ui-foundation`
 
 ## Build locally
 
@@ -39,7 +43,7 @@ app\build\outputs\apk\debug\app-debug.apk
 
 GitHub Actions runs the deterministic unit-test suite before compiling the debug application. The test gate includes training/analytics tests, adaptive-training intelligence tests and a Robolectric persistence migration/backup round-trip test. A build is only considered verified when the test gate and `assembleDebug` both succeed, after which the APK and Android Studio project are packaged as artifacts.
 
-## V3.5 analytics definitions
+## Analytics definitions
 
 - **Attempt:** every physical character-key press made while a target character is expected.
 - **Correct:** an attempt that enters the expected target character.
@@ -53,76 +57,42 @@ GitHub Actions runs the deterministic unit-test suite before compiling the debug
 - **Transition accuracy:** successful attempts at the second key of an intended adjacent pair divided by all attempts at that transition.
 - **Transition latency:** time from the preceding correctly completed key through successful completion of the next key, including time spent recovering from mistakes.
 
-## V3.6 persistence architecture
+## Persistence architecture
 
-ThumbType no longer uses SharedPreferences/JSON as the primary long-term store for growing training data.
+ThumbType uses **Room** for growing structured training data and **Preferences DataStore** for compact user/settings state.
 
-**Room database (`thumbtype.db`) stores:**
+Room stores session history, detailed result metrics, per-key analytics, transition analytics, completed lessons and daily practice totals. DataStore stores onboarding state, theme, haptics, sound, accessibility preferences, coaching level, training goals, XP, lifetime counters, best WPM, streak and the last-practice date.
 
-- Session history with detailed result metrics
-- Per-key analytics
-- Per-transition analytics
-- Completed lesson progress
-- Daily practice totals
-
-**Preferences DataStore stores:**
-
-- Onboarding state
-- Theme, haptics, sound and accessibility preferences
-- Coaching level
-- Training goals and baseline
-- XP and lifetime counters
-- Best WPM
-- Streak and last-practice date
-
-Repository operations are asynchronous `suspend` functions. The ViewModel performs persistence work on an IO dispatcher so database/file work is no longer intentionally performed on the Compose UI path.
-
-### Existing-user migration
-
-On first V3.6 launch, the structured repository checks for the legacy `thumbtype_elite_v3` SharedPreferences store. Existing profile, settings, XP, totals, streak, lesson completion, history, key statistics, transition statistics and current-day practice are copied into Room/DataStore once. The legacy store is left untouched after migration to preserve a rollback path. Intentionally deleting all local data clears both the structured data and the legacy rollback store so deleted data cannot reappear.
-
-### Backup format
-
-New backups use **ThumbType backup version 5** and include structured sessions plus key/transition analytics and daily-practice records. Import remains compatible with backup versions 1 through 5. The automated persistence test verifies legacy migration, export, deletion and V5 restore as one round trip.
+The repository migrates legacy `thumbtype_elite_v3` SharedPreferences data once and leaves the old store untouched as a rollback path until the user intentionally deletes all local data. New backups use ThumbType backup version 5 and remain compatible with versions 1 through 5.
 
 ## V4.0 adaptive training intelligence
 
-ThumbType derives a deterministic training profile from actual local performance data instead of serving only fixed daily exercises.
+The deterministic intelligence layer calculates recent WPM, accuracy and ThumbScore windows; trend deltas; plateau detection; confidence-aware per-key and transition mastery; left/right screen-zone mastery; adaptive center-key mastery; training priority; difficulty from 1–10; targeted drill material; and daily workout allocation based on the user's selected training time.
 
-The intelligence layer calculates:
+The engine intentionally talks about **left/right screen zones and recommended reach**, not biological-thumb detection. Android touch events do not reliably identify which physical thumb produced a tap.
 
-- Recent WPM, accuracy and ThumbScore windows
-- Speed, accuracy and score trend deltas
-- Plateau detection across recent and previous session windows
-- Confidence-aware per-key mastery
-- Confidence-aware transition/digraph mastery
-- Left-zone, right-zone and adaptive center-key mastery
-- A current training priority such as accuracy, speed, transitions, center reach, left/right zone, rhythm or endurance
-- A 1-10 adaptive difficulty level
-- Targeted drill text generated from weak keys and weak transitions
-- A daily workout whose four blocks are automatically allocated to the user's selected daily time goal
+## V4.1 UI foundation
 
-Mastery scores combine accuracy, latency and sample confidence so a tiny sample cannot be mistaken for proven mastery. The engine intentionally describes left/right **screen zones and recommended reach**, not biological-thumb detection; Android touch events do not reliably identify which physical thumb produced a tap.
+V4.1 introduced centralized design tokens, a refined light/dark Material 3 theme, a consistent shape hierarchy, larger-text-aware typography, reduced-motion tokens, upgraded reusable cards/metrics/pills/charts/heatmaps and the first redesigned adaptive Home dashboard.
 
-The current intelligence is deterministic by design. It does not require generative AI, cloud transmission or private typed-text uploads, which keeps recommendations measurable, testable and offline-first.
+## V4.2 premium experience
 
-## V4.1 premium UI foundation
+V4.2 carries the premium design system through the active application experience rather than limiting it to Home.
 
-V4.1 begins the visual-product upgrade without replacing every screen in one risky rewrite.
+The routed application now uses premium versions of:
 
-The global UI foundation now includes:
+- Onboarding and baseline-plan setup
+- Learning-path presentation
+- Practice lab and adaptive coach summary
+- Progress dashboard, trend controls, heatmap and weak-transition presentation
+- Profile/settings and privacy/data controls
+- Session Results presentation
+- Trainer chrome, live metrics and reach coach
+- Custom training keyboard with 50dp interaction height, stronger visual hierarchy and screen-reader semantics on training keys
 
-- Centralized spacing, motion and component-size tokens
-- A refined light/dark Material 3 color system
-- Centralized rounded-shape hierarchy
-- A fuller typography hierarchy that continues to respect the larger-text setting
-- A reduced-motion token exposed through the design system for progressive adoption by animated screens
-- Refined reusable cards, metric tiles, pills, action rows, charts, heatmaps, switches, achievement tiles and score presentation
-- A dedicated adaptive-coach card backed by the real V4 training-intelligence profile
-- A new premium Home dashboard that puts ThumbScore, adaptive coaching, WPM/accuracy, daily progress, curriculum progress and the personalized workout above lower-priority content
-- Refined bottom-navigation styling and loading presentation
+The new trainer preserves the established analytics model and still records the side of the **screen** tapped. It does not claim biological-thumb detection. Wrong attempts still do not advance the target position; the displayed backspace currently clears the immediate error state rather than acting as a full editable-text history. Full active-session persistence and a richer correction model remain separate future engineering work.
 
-This checkpoint is intentionally the **UI foundation plus Home dashboard**, not a claim that every app screen has been fully redesigned. Trainer/keyboard, Results, Onboarding, Learn, Practice, Progress, Profile/Privacy, responsive-device behavior, detailed empty/error states and deeper accessibility/motion polish remain scheduled for the next UI subphase.
+The older screen implementations remain in the source tree temporarily as a low-risk fallback while V4.2 is validated. `MainActivity` routes real users through the premium V4.2 screens.
 
 ## Security baseline
 
@@ -132,4 +102,6 @@ Never commit signing keys, passwords, API secrets, service-account files, `.env`
 
 ## Architecture direction
 
-The architecture foundation includes lifecycle-aware StateFlow UI state, ViewModel-owned application actions, feature read models, a repository abstraction, an application dependency container, centralized navigation policy, saved-state restoration, asynchronous persistence, Room, DataStore, deterministic adaptive-training intelligence and a centralized UI design system. Major phases continue to be implemented and verified one at a time rather than through large unverified rewrites.
+The architecture foundation includes lifecycle-aware StateFlow UI state, ViewModel-owned actions, feature read models, repository abstraction, application dependency container, centralized navigation policy, saved-state restoration, asynchronous persistence, Room, DataStore, deterministic adaptive-training intelligence and a centralized UI design system.
+
+Major phases continue to be implemented and verified one at a time. Upcoming production work includes accessibility/device adaptation, performance benchmarking, broader automated UI/integration testing, CI/CD hardening, account/backend architecture, offline-first cloud sync, security hardening, production signing and Google Play release validation.
