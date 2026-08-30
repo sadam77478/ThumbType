@@ -18,6 +18,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sadam.thumbtype.mobile.app.ThumbTypeViewModel
+import com.sadam.thumbtype.mobile.app.navigation.ThumbTypeNavigation
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -33,7 +34,6 @@ fun ThumbTypeRoot(viewModel: ThumbTypeViewModel = viewModel()) {
     val context = LocalContext.current
     val activity = context as? ComponentActivity
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val repo = viewModel.repository
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
@@ -101,7 +101,7 @@ fun ThumbTypeRoot(viewModel: ThumbTypeViewModel = viewModel()) {
                             ResultsScreen(
                                 result = result,
                                 profile = state.profile,
-                                personalBest = repo.bestWpm(),
+                                personalBest = state.readModels.home.bestWpm,
                                 onContinue = viewModel::goHome,
                                 onRetry = viewModel::retryCurrentLesson,
                                 onWeakness = viewModel::startWeaknessLesson
@@ -129,14 +129,15 @@ fun ThumbTypeRoot(viewModel: ThumbTypeViewModel = viewModel()) {
                         snackbarHost = { SnackbarHost(snackbarHostState) },
                         bottomBar = {
                             NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
-                                val items = listOf(
-                                    Triple(AppScreen.Home, Icons.Default.Home, "Home"),
-                                    Triple(AppScreen.Learn, Icons.Default.School, "Learn"),
-                                    Triple(AppScreen.Practice, Icons.Default.Bolt, "Practice"),
-                                    Triple(AppScreen.Progress, Icons.Default.AutoGraph, "Progress"),
-                                    Triple(AppScreen.Profile, Icons.Default.Person, "Profile")
-                                )
-                                items.forEach { (target, icon, label) ->
+                                ThumbTypeNavigation.bottomDestinations.forEach { target ->
+                                    val (icon, label) = when (target) {
+                                        AppScreen.Home -> Icons.Default.Home to "Home"
+                                        AppScreen.Learn -> Icons.Default.School to "Learn"
+                                        AppScreen.Practice -> Icons.Default.Bolt to "Practice"
+                                        AppScreen.Progress -> Icons.Default.AutoGraph to "Progress"
+                                        AppScreen.Profile -> Icons.Default.Person to "Profile"
+                                        else -> Icons.Default.Home to target.name
+                                    }
                                     NavigationBarItem(
                                         selected = state.screen == target,
                                         onClick = { viewModel.navigate(target) },
@@ -150,22 +151,25 @@ fun ThumbTypeRoot(viewModel: ThumbTypeViewModel = viewModel()) {
                         Box(Modifier.fillMaxSize().padding(padding)) {
                             when (state.screen) {
                                 AppScreen.Home -> HomeScreen(
-                                    repo,
-                                    state.refreshToken,
-                                    viewModel::startLesson,
-                                    viewModel::navigate
+                                    data = state.readModels.home,
+                                    onStart = viewModel::startLesson,
+                                    onNavigate = viewModel::navigate
                                 )
 
                                 AppScreen.Learn -> LearnScreen(
-                                    repo,
-                                    state.refreshToken,
-                                    viewModel::startLesson
+                                    data = state.readModels.learn,
+                                    onStart = viewModel::startLesson
                                 )
 
-                                AppScreen.Practice -> PracticeScreen(repo, viewModel::startLesson)
-                                AppScreen.Progress -> ProgressScreen(repo, state.refreshToken)
+                                AppScreen.Practice -> PracticeScreen(
+                                    data = state.readModels.practice,
+                                    onStart = viewModel::startLesson
+                                )
+
+                                AppScreen.Progress -> ProgressScreen(state.readModels.progress)
+
                                 AppScreen.Profile -> ProfileScreen(
-                                    repo = repo,
+                                    data = state.readModels.profile,
                                     settings = state.settings,
                                     profile = state.profile,
                                     onSettings = viewModel::saveSettings,
@@ -179,7 +183,7 @@ fun ThumbTypeRoot(viewModel: ThumbTypeViewModel = viewModel()) {
                     }
                 }
 
-                if (state.screen in listOf(AppScreen.Onboarding, AppScreen.Trainer, AppScreen.Results, AppScreen.Privacy)) {
+                if (state.screen in ThumbTypeNavigation.fullScreenDestinations) {
                     SnackbarHost(
                         snackbarHostState,
                         Modifier.align(androidx.compose.ui.Alignment.BottomCenter).navigationBarsPadding()
