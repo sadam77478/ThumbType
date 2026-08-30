@@ -53,12 +53,15 @@ data class ThumbTypeReadModels(
     val profile: ProfileUiData = ProfileUiData()
 )
 
-fun ThumbTypeRepository.readModels(): ThumbTypeReadModels {
+/** Builds one consistent UI snapshot off the main thread through suspend repository calls. */
+suspend fun ThumbTypeRepository.readModels(): ThumbTypeReadModels {
     val profile = profile()
     val completed = completedLessonIds()
     val keys = keyStats()
     val transitions = transitionStats()
     val history = history()
+    val bestWpm = bestWpm()
+    val xp = xp()
 
     return ThumbTypeReadModels(
         home = HomeUiData(
@@ -70,8 +73,8 @@ fun ThumbTypeRepository.readModels(): ThumbTypeReadModels {
             streak = streak(),
             lastWpm = history.lastOrNull()?.wpm ?: profile.baselineWpm,
             lastAccuracy = history.lastOrNull()?.accuracy ?: profile.baselineAccuracy,
-            bestWpm = bestWpm(),
-            xp = xp(),
+            bestWpm = bestWpm,
+            xp = xp,
             totalCharacters = totalCharacters()
         ),
         learn = LearnUiData(completedLessonIds = completed),
@@ -84,10 +87,10 @@ fun ThumbTypeRepository.readModels(): ThumbTypeReadModels {
             weakTransitions = topWeakTransitions(),
             profile = profile,
             lastWpm = history.lastOrNull()?.wpm ?: profile.baselineWpm,
-            bestWpm = bestWpm(),
+            bestWpm = bestWpm,
             thumbScore = history.lastOrNull()?.thumbScore ?: 0,
             achievements = achievements()
         ),
-        profile = ProfileUiData(xp = xp())
+        profile = ProfileUiData(xp = xp)
     )
 }
