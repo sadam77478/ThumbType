@@ -1,6 +1,7 @@
 package com.sadam.thumbtype.mobile.data.local
 
 import android.content.Context
+import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
@@ -30,6 +31,9 @@ data class StoredPreferences(
 )
 
 class ThumbTypePreferencesStore(private val context: Context) {
+    @Volatile
+    private var cachedSnapshot: StoredPreferences? = null
+
     private object Keys {
         val migrationVersion = intPreferencesKey("migration_version")
         val onboarded = booleanPreferencesKey("onboarded")
@@ -54,18 +58,23 @@ class ThumbTypePreferencesStore(private val context: Context) {
         val lastPracticeDate = stringPreferencesKey("last_practice_date")
     }
 
-    suspend fun snapshot(): StoredPreferences = context.thumbTypeDataStore.data.first().toStoredPreferences()
+    suspend fun snapshot(): StoredPreferences {
+        cachedSnapshot?.let { return it }
+        return context.thumbTypeDataStore.data.first().toStoredPreferences().also {
+            cachedSnapshot = it
+        }
+    }
 
     suspend fun replace(value: StoredPreferences) {
-        context.thumbTypeDataStore.edit { p -> writeAll(p, value) }
+        editAndCache { p -> writeAll(p, value) }
     }
 
     suspend fun setOnboarded(value: Boolean) {
-        context.thumbTypeDataStore.edit { it[Keys.onboarded] = value }
+        editAndCache { it[Keys.onboarded] = value }
     }
 
     suspend fun saveSettings(value: AppSettings) {
-        context.thumbTypeDataStore.edit { p ->
+        editAndCache { p ->
             p[Keys.darkMode] = value.darkMode
             p[Keys.haptics] = value.haptics
             p[Keys.sounds] = value.sounds
@@ -77,7 +86,7 @@ class ThumbTypePreferencesStore(private val context: Context) {
     }
 
     suspend fun saveProfile(value: UserProfile) {
-        context.thumbTypeDataStore.edit { p ->
+        editAndCache { p ->
             p[Keys.targetWpm] = value.targetWpm.coerceIn(20, 120)
             p[Keys.targetAccuracy] = value.targetAccuracy.coerceIn(80, 100)
             p[Keys.dailyGoalMinutes] = value.dailyGoalMinutes.coerceIn(5, 60)
@@ -88,17 +97,22 @@ class ThumbTypePreferencesStore(private val context: Context) {
     }
 
     suspend fun updateCounters(transform: (StoredPreferences) -> StoredPreferences) {
-        context.thumbTypeDataStore.edit { p ->
+        editAndCache { p ->
             val updated = transform(p.toStoredPreferences())
             writeAll(p, updated)
         }
     }
 
     suspend fun clearKeepingMigrationMarker() {
-        context.thumbTypeDataStore.edit { p ->
+        editAndCache { p ->
             p.clear()
             p[Keys.migrationVersion] = CURRENT_MIGRATION_VERSION
         }
+    }
+
+    private suspend fun editAndCache(transform: suspend (MutablePreferences) -> Unit) {
+        val updated = context.thumbTypeDataStore.edit { preferences -> transform(preferences) }
+        cachedSnapshot = updated.toStoredPreferences()
     }
 
     private fun Preferences.toStoredPreferences(): StoredPreferences {
@@ -135,7 +149,7 @@ class ThumbTypePreferencesStore(private val context: Context) {
         )
     }
 
-    private fun writeAll(p: androidx.datastore.preferences.core.MutablePreferences, value: StoredPreferences) {
+    private fun writeAll(p: MutablePreferences, value: StoredPreferences) {
         p[Keys.migrationVersion] = value.migrationVersion
         p[Keys.onboarded] = value.onboarded
         p[Keys.darkMode] = value.settings.darkMode
