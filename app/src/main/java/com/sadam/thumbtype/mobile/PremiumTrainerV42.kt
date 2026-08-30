@@ -6,7 +6,9 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -57,6 +59,7 @@ fun PremiumTrainerScreen(
     val haptic = LocalHapticFeedback.current
     val tone = remember { ToneGenerator(AudioManager.STREAM_MUSIC, 25) }
     val spacing = ThumbTypeDesign.spacing
+    val windowInfo = rememberThumbTypeWindowInfo()
 
     DisposableEffect(Unit) { onDispose { tone.release() } }
 
@@ -93,6 +96,7 @@ fun PremiumTrainerScreen(
     val wpm = if (elapsed < 800L) 0 else (((index / 5.0) / (elapsed / 60_000.0))).roundToInt().coerceAtMost(250)
     val accuracy = if (events.isEmpty()) 100 else (events.count { it.correct } * 100.0 / events.size).roundToInt()
     val rhythm = TrainingEngine.rhythmScore(events.filter { it.correct }.drop(1).map { it.elapsedFromPreviousMs })
+    val errors = events.count { !it.correct }
     val progress = if (lesson.timeLimitSeconds != null && started > 0L) {
         (elapsed / (lesson.timeLimitSeconds * 1000f)).coerceIn(0f, 1f)
     } else {
@@ -108,11 +112,11 @@ fun PremiumTrainerScreen(
         ) {
             Column(Modifier.padding(horizontal = spacing.sm, vertical = spacing.xs)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = onExit, modifier = Modifier.size(48.dp)) {
+                    IconButton(onClick = onExit, modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)) {
                         Icon(Icons.Default.Close, contentDescription = "Exit training")
                     }
                     Column(Modifier.weight(1f)) {
-                        Text(lesson.title, style = MaterialTheme.typography.titleMedium, maxLines = 1)
+                        Text(lesson.title, style = MaterialTheme.typography.titleMedium, maxLines = 2)
                         Text(
                             "${lesson.skill} • focused training",
                             style = MaterialTheme.typography.labelSmall,
@@ -133,19 +137,23 @@ fun PremiumTrainerScreen(
         }
 
         Column(
-            Modifier.weight(1f).padding(horizontal = spacing.md, vertical = spacing.sm),
+            Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = spacing.md, vertical = spacing.sm),
             verticalArrangement = Arrangement.spacedBy(spacing.sm)
         ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                PremiumLiveMetric("$wpm", "WPM", Icons.Default.Speed, Modifier.weight(1f), MaterialTheme.colorScheme.primary)
-                PremiumLiveMetric("$accuracy%", "Accuracy", Icons.Default.GpsFixed, Modifier.weight(1f), MaterialTheme.colorScheme.secondary)
-                PremiumLiveMetric("$rhythm%", "Rhythm", Icons.Default.GraphicEq, Modifier.weight(1f), ThumbAmber)
-                PremiumLiveMetric("${events.count { !it.correct }}", "Errors", Icons.Default.Warning, Modifier.weight(1f), MaterialTheme.colorScheme.error)
-            }
+            PremiumTrainerMetrics(
+                wpm = wpm,
+                accuracy = accuracy,
+                rhythm = rhythm,
+                errors = errors,
+                stacked = settings.largeText || windowInfo.widthDp < 380
+            )
 
             PremiumCard(contentPadding = PaddingValues(16.dp)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Column {
+                    Column(Modifier.weight(1f)) {
                         Text("TARGET", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Black)
                         Text(
                             if (index >= target.length) "Complete" else "Character ${index + 1} of ${target.length}",
@@ -153,6 +161,7 @@ fun PremiumTrainerScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
+                    Spacer(Modifier.width(8.dp))
                     TinyPill(if (wrong) "Correct the key" else "Stay relaxed", if (wrong) Icons.Default.ErrorOutline else Icons.Default.Spa, if (wrong) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.secondary)
                 }
                 Spacer(Modifier.height(12.dp))
@@ -168,6 +177,7 @@ fun PremiumTrainerScreen(
                     minimal = settings.coachLevel == CoachLevel.MINIMAL
                 )
             }
+            Spacer(Modifier.height(2.dp))
         }
 
         PremiumTrainingKeyboard(
@@ -224,9 +234,32 @@ fun PremiumTrainerScreen(
 }
 
 @Composable
+private fun PremiumTrainerMetrics(wpm: Int, accuracy: Int, rhythm: Int, errors: Int, stacked: Boolean) {
+    if (stacked) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                PremiumLiveMetric("$wpm", "WPM", Icons.Default.Speed, Modifier.weight(1f), MaterialTheme.colorScheme.primary)
+                PremiumLiveMetric("$accuracy%", "Accuracy", Icons.Default.GpsFixed, Modifier.weight(1f), MaterialTheme.colorScheme.secondary)
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                PremiumLiveMetric("$rhythm%", "Rhythm", Icons.Default.GraphicEq, Modifier.weight(1f), ThumbAmber)
+                PremiumLiveMetric("$errors", "Errors", Icons.Default.Warning, Modifier.weight(1f), MaterialTheme.colorScheme.error)
+            }
+        }
+    } else {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            PremiumLiveMetric("$wpm", "WPM", Icons.Default.Speed, Modifier.weight(1f), MaterialTheme.colorScheme.primary)
+            PremiumLiveMetric("$accuracy%", "Accuracy", Icons.Default.GpsFixed, Modifier.weight(1f), MaterialTheme.colorScheme.secondary)
+            PremiumLiveMetric("$rhythm%", "Rhythm", Icons.Default.GraphicEq, Modifier.weight(1f), ThumbAmber)
+            PremiumLiveMetric("$errors", "Errors", Icons.Default.Warning, Modifier.weight(1f), MaterialTheme.colorScheme.error)
+        }
+    }
+}
+
+@Composable
 private fun PremiumLiveMetric(value: String, label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier, accent: Color) {
     Surface(
-        modifier = modifier,
+        modifier = modifier.thumbTypeReadout(label, value),
         shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
@@ -235,7 +268,7 @@ private fun PremiumLiveMetric(value: String, label: String, icon: androidx.compo
             Icon(icon, contentDescription = null, modifier = Modifier.size(15.dp), tint = accent)
             Spacer(Modifier.height(4.dp))
             Text(value, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Black)
-            Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+            Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
         }
     }
 }
@@ -246,6 +279,12 @@ private fun PremiumTargetText(text: String, index: Int, wrong: Boolean, large: B
     val secondary = MaterialTheme.colorScheme.secondary
     val error = MaterialTheme.colorScheme.error
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    val expected = text.getOrNull(index)
+    val expectedLabel = when (expected) {
+        null -> "complete"
+        ' ' -> "space"
+        else -> expected.toString()
+    }
     val annotated = buildAnnotatedString {
         text.forEachIndexed { i, char ->
             when {
@@ -263,6 +302,7 @@ private fun PremiumTargetText(text: String, index: Int, wrong: Boolean, large: B
     }
     Text(
         annotated,
+        modifier = Modifier.semantics { contentDescription = "Typing target. Next character: $expectedLabel" },
         style = if (large) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.titleLarge,
         lineHeight = if (large) MaterialTheme.typography.headlineSmall.lineHeight else MaterialTheme.typography.titleLarge.lineHeight
     )
@@ -280,8 +320,12 @@ private fun PremiumThumbCoach(expected: Char, side: ThumbSide, layer: KeyboardLa
         else -> "Flexible center reach"
     }
     val accent = if (needLayer || needShift) ThumbAmber else MaterialTheme.colorScheme.primary
+    val targetLabel = if (expected == ' ') "space" else expected.uppercase()
 
     Surface(
+        modifier = Modifier.semantics(mergeDescendants = true) {
+            contentDescription = "Reach coach. $instruction. Target $targetLabel"
+        },
         shape = MaterialTheme.shapes.large,
         color = accent.copy(.075f),
         border = BorderStroke(1.dp, accent.copy(.16f))
@@ -295,10 +339,11 @@ private fun PremiumThumbCoach(expected: Char, side: ThumbSide, layer: KeyboardLa
         } else {
             Column(Modifier.padding(13.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Column {
+                    Column(Modifier.weight(1f)) {
                         Text("LIVE REACH COACH", style = MaterialTheme.typography.labelSmall, color = accent, fontWeight = FontWeight.Black)
                         Text(instruction, style = MaterialTheme.typography.titleSmall)
                     }
+                    Spacer(Modifier.width(8.dp))
                     TinyPill(if (expected == ' ') "SPACE" else expected.uppercase(), Icons.Default.Keyboard, accent)
                 }
                 Spacer(Modifier.height(10.dp))
@@ -314,7 +359,12 @@ private fun PremiumThumbCoach(expected: Char, side: ThumbSide, layer: KeyboardLa
 
 @Composable
 private fun PremiumCoachSide(label: String, active: Boolean, accent: Color) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(
+        modifier = Modifier.semantics(mergeDescendants = true) {
+            contentDescription = "$label screen side, ${if (active) "recommended" else "not currently recommended"}"
+        },
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
         Surface(shape = CircleShape, color = if (active) accent.copy(.15f) else MaterialTheme.colorScheme.surfaceVariant) {
             Icon(
                 Icons.Default.TouchApp,
@@ -358,7 +408,7 @@ private fun PremiumTrainingKeyboard(
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     PremiumSpecialKey("⇧", "Shift", shift || expected?.isUpperCase() == true, Modifier.weight(1.18f), onShift)
                     "zxcvbnm".forEach { PremiumKey(it, expected, recommended, shift, settings, Modifier.weight(1f), onKey) }
-                    PremiumSpecialKey("⌫", "Backspace", false, Modifier.weight(1.18f), onBackspace)
+                    PremiumSpecialKey("⌫", "Clear error prompt", false, Modifier.weight(1.18f), onBackspace)
                 }
                 PremiumBottomRow(expected, recommended, settings, onLayer, onKey, "123")
             } else {
@@ -368,7 +418,7 @@ private fun PremiumTrainingKeyboard(
                 PremiumBottomRow(expected, recommended, settings, onLayer, onKey, "ABC")
             }
             Text(
-                "Reach-match uses the side of the screen tapped; center-key recommendations remain adaptive.",
+                "Reach-match uses the side of the screen tapped; accessibility activation is excluded from side scoring.",
                 Modifier.fillMaxWidth().padding(top = 1.dp),
                 style = MaterialTheme.typography.labelSmall,
                 textAlign = TextAlign.Center,
@@ -438,11 +488,22 @@ private fun PremiumKey(
         char == ' ' -> "Space"
         else -> (label ?: char.toString()).uppercase()
     }
+    val stateText = buildString {
+        if (active) append("Expected key")
+        if (recommended != ThumbSide.FLEX && active) {
+            if (isNotEmpty()) append(", ")
+            append(if (recommended == ThumbSide.LEFT) "left screen side recommended" else "right screen side recommended")
+        }
+    }.ifBlank { null }
 
     Surface(
         modifier = modifier
-            .height(50.dp)
-            .semantics { contentDescription = "Keyboard key $description" }
+            .heightIn(min = ThumbTypeSizes.minimumTouchTarget)
+            .thumbTypeAccessibleAction(
+                label = "Keyboard key $description",
+                stateText = stateText,
+                onActivate = { onKey(char, ThumbSide.FLEX) }
+            )
             .onGloballyPositioned { x = it.positionInWindow().x }
             .pointerInput(char, widthPx, shift) {
                 detectTapGestures { local ->
@@ -479,8 +540,12 @@ private fun PremiumSpecialKey(label: String, description: String, active: Boolea
     val accent = if (active) ThumbAmber else MaterialTheme.colorScheme.onSurfaceVariant
     Surface(
         modifier = modifier
-            .height(50.dp)
-            .semantics { contentDescription = description }
+            .heightIn(min = ThumbTypeSizes.minimumTouchTarget)
+            .thumbTypeAccessibleAction(
+                label = description,
+                stateText = if (active) "Active" else null,
+                onActivate = onClick
+            )
             .pointerInput(label) { detectTapGestures { onClick() } },
         shape = MaterialTheme.shapes.small,
         color = if (active) ThumbAmber.copy(.16f) else MaterialTheme.colorScheme.surfaceVariant,
