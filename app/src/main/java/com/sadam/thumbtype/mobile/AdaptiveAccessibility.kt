@@ -10,6 +10,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.onClick
@@ -81,6 +82,10 @@ fun ThumbTypeAdaptiveContainer(
 /**
  * Responsive app chrome: bottom navigation on phones and a navigation rail on expanded
  * tablet/foldable widths. Screen content remains centered and width-bounded.
+ *
+ * The root shell exposes a stable test tag for each routed destination. This intentionally avoids
+ * coupling instrumentation tests to translated/visual copy while leaving accessibility semantics
+ * unchanged for users.
  */
 @Composable
 fun ThumbTypeAppShell(
@@ -90,9 +95,12 @@ fun ThumbTypeAppShell(
     content: @Composable () -> Unit
 ) {
     val window = rememberThumbTypeWindowInfo()
+    val shellModifier = Modifier
+        .fillMaxSize()
+        .testTag("thumbtype-shell-${currentScreen.name.lowercase()}")
 
     if (window.widthClass == ThumbTypeWidthClass.EXPANDED) {
-        Row(Modifier.fillMaxSize()) {
+        Row(shellModifier) {
             NavigationRail(
                 modifier = Modifier.fillMaxHeight().navigationBarsPadding(),
                 containerColor = MaterialTheme.colorScheme.surface
@@ -119,6 +127,7 @@ fun ThumbTypeAppShell(
         }
     } else {
         Scaffold(
+            modifier = shellModifier,
             containerColor = MaterialTheme.colorScheme.background,
             snackbarHost = { SnackbarHost(snackbarHostState) },
             bottomBar = {
