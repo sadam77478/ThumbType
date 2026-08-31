@@ -29,7 +29,7 @@ class OnboardingJourneyTest {
         waitForText("Build a daily routine")
         composeRule.onNodeWithText("Continue").performClick()
 
-        waitForText("Plan ready")
+        waitForText("Skip test for now")
         composeRule.onNodeWithText("Skip test for now").assertIsDisplayed().performClick()
 
         waitForTag("thumbtype-shell-home")
