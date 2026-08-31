@@ -2,6 +2,7 @@ package com.sadam.thumbtype.mobile
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -31,13 +32,19 @@ class OnboardingJourneyTest {
         waitForText("Plan ready")
         composeRule.onNodeWithText("Skip test for now").assertIsDisplayed().performClick()
 
-        waitForText("Home")
-        composeRule.onNodeWithText("Home").assertIsDisplayed()
+        waitForTag("thumbtype-shell-home")
+        composeRule.onNodeWithTag("thumbtype-shell-home").assertIsDisplayed()
     }
 
     private fun waitForText(text: String) {
         composeRule.waitUntil(timeoutMillis = 10_000) {
             runCatching { composeRule.onNodeWithText(text).fetchSemanticsNode() }.isSuccess
+        }
+    }
+
+    private fun waitForTag(tag: String) {
+        composeRule.waitUntil(timeoutMillis = 10_000) {
+            runCatching { composeRule.onNodeWithTag(tag).fetchSemanticsNode() }.isSuccess
         }
     }
 }
