@@ -3,7 +3,7 @@ name: Validate and Package ThumbType
 on:
   workflow_dispatch:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "work/v5-trainer-rebuild" ]
 
 jobs:
   build:
@@ -38,7 +38,7 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
-      - name: Run Android onboarding reliability journey
+      - name: Run Android journeys and capture V5 trainer
         uses: reactivecircus/android-emulator-runner@v2
         timeout-minutes: 15
         with:
@@ -46,7 +46,11 @@ jobs:
           arch: x86_64
           profile: pixel_2
           disable-animations: true
-          script: gradle connectedDebugAndroidTest
+          script: |
+            gradle connectedDebugAndroidTest
+            mkdir -p visual-artifacts
+            adb exec-out run-as com.sadam.thumbtype.mobile.debug cat files/thumbtype-v5-trainer.png > visual-artifacts/thumbtype-v5-trainer.png
+            test -s visual-artifacts/thumbtype-v5-trainer.png
 
       - name: Build minified release APK
         run: gradle assembleRelease
@@ -61,7 +65,7 @@ jobs:
           RELEASE_BYTES=$(stat -c%s "$RELEASE_APK")
           DEBUG_BUDGET=$((30 * 1024 * 1024))
           RELEASE_BUDGET=$((25 * 1024 * 1024))
-          printf "ThumbType V4.5 testing/reliability artifact report\n" > performance-ci.txt
+          printf "ThumbType V5 trainer rebuild artifact report\n" > performance-ci.txt
           printf "debug_apk_bytes=%s\n" "$DEBUG_BYTES" >> performance-ci.txt
           printf "release_apk_bytes=%s\n" "$RELEASE_BYTES" >> performance-ci.txt
           printf "debug_budget_bytes=%s\n" "$DEBUG_BUDGET" >> performance-ci.txt
@@ -73,49 +77,57 @@ jobs:
       - name: Generate Gradle wrapper
         run: gradle wrapper --gradle-version 8.9
 
-      - name: Package verified Android Studio project
+      - name: Package Android Studio project
         run: |
           rm -rf package-root
-          mkdir -p package-root/ThumbType_V4_5_Testing_Reliability_Verified
-          cp -R app package-root/ThumbType_V4_5_Testing_Reliability_Verified/
-          cp build.gradle settings.gradle gradle.properties README.md package-root/ThumbType_V4_5_Testing_Reliability_Verified/
-          cp gradlew gradlew.bat package-root/ThumbType_V4_5_Testing_Reliability_Verified/
-          cp -R gradle package-root/ThumbType_V4_5_Testing_Reliability_Verified/
-          if [ -d docs ]; then cp -R docs package-root/ThumbType_V4_5_Testing_Reliability_Verified/; fi
-          cp performance-ci.txt package-root/ThumbType_V4_5_Testing_Reliability_Verified/
-          rm -rf package-root/ThumbType_V4_5_Testing_Reliability_Verified/app/build
+          mkdir -p package-root/ThumbType_V5_Trainer_Rebuild
+          cp -R app package-root/ThumbType_V5_Trainer_Rebuild/
+          cp build.gradle settings.gradle gradle.properties README.md package-root/ThumbType_V5_Trainer_Rebuild/
+          cp gradlew gradlew.bat package-root/ThumbType_V5_Trainer_Rebuild/
+          cp -R gradle package-root/ThumbType_V5_Trainer_Rebuild/
+          if [ -d docs ]; then cp -R docs package-root/ThumbType_V5_Trainer_Rebuild/; fi
+          cp performance-ci.txt package-root/ThumbType_V5_Trainer_Rebuild/
+          cp visual-artifacts/thumbtype-v5-trainer.png package-root/ThumbType_V5_Trainer_Rebuild/
+          rm -rf package-root/ThumbType_V5_Trainer_Rebuild/app/build
           cd package-root
-          zip -r ../ThumbType-V4.5-Testing-Reliability-Verified-Android-Studio.zip ThumbType_V4_5_Testing_Reliability_Verified
+          zip -r ../ThumbType-V5-Trainer-Rebuild-Android-Studio.zip ThumbType_V5_Trainer_Rebuild
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: ThumbType-V4.5-Test-Reports
+          name: ThumbType-V5-Test-Reports
           path: |
             app/build/reports
             app/build/outputs/androidTest-results
           if-no-files-found: warn
 
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: ThumbType-V4.5-Debug-APK
+          name: ThumbType-V5-Trainer-Visual-Review
+          path: visual-artifacts/thumbtype-v5-trainer.png
+          if-no-files-found: warn
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ThumbType-V5-Debug-APK
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ThumbType-V4.5-Release-Unsigned-APK
+          name: ThumbType-V5-Release-Unsigned-APK
           path: app/build/outputs/apk/release/app-release-unsigned.apk
           if-no-files-found: error
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ThumbType-V4.5-Performance-Report
+          name: ThumbType-V5-Performance-Report
           path: performance-ci.txt
           if-no-files-found: error
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ThumbType-V4.5-Testing-Reliability-Verified-Android-Studio
-          path: ThumbType-V4.5-Testing-Reliability-Verified-Android-Studio.zip
+          name: ThumbType-V5-Trainer-Rebuild-Android-Studio
+          path: ThumbType-V5-Trainer-Rebuild-Android-Studio.zip
           if-no-files-found: error
