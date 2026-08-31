@@ -114,7 +114,7 @@ fun ThumbTypeRoot() {
                         AppScreen.Trainer -> key(state.sessionNonce) {
                             val windowInfo = rememberThumbTypeWindowInfo()
                             ThumbTypeAdaptiveContainer(maxContentWidth = windowInfo.trainerMaxWidth) {
-                                PremiumTrainerScreen(
+                                V5TrainerScreen(
                                     lesson = state.selectedLesson,
                                     settings = state.settings,
                                     profile = state.profile,
