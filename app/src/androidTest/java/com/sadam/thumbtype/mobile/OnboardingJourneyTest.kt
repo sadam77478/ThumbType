@@ -31,7 +31,8 @@ class OnboardingJourneyTest {
         waitForText("Plan ready")
         composeRule.onNodeWithText("Skip test for now").assertIsDisplayed().performClick()
 
-        waitForText("Build your baseline")
+        waitForText("Home")
+        composeRule.onNodeWithText("Home").assertIsDisplayed()
     }
 
     private fun waitForText(text: String) {
