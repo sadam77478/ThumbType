@@ -47,10 +47,12 @@ jobs:
           profile: pixel_2
           disable-animations: true
           script: |
-            gradle connectedDebugAndroidTest
+            gradle installDebug installDebugAndroidTest
+            adb shell am instrument -w com.sadam.thumbtype.mobile.debug.test/androidx.test.runner.AndroidJUnitRunner
             mkdir -p visual-artifacts
             adb exec-out run-as com.sadam.thumbtype.mobile.debug cat files/thumbtype-v5-trainer.png > visual-artifacts/thumbtype-v5-trainer.png
-            test -s visual-artifacts/thumbtype-v5-trainer.png
+            file visual-artifacts/thumbtype-v5-trainer.png | grep -q 'PNG image data'
+            test $(stat -c%s visual-artifacts/thumbtype-v5-trainer.png) -gt 10000
 
       - name: Build minified release APK
         run: gradle assembleRelease
